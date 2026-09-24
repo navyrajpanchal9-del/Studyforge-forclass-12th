@@ -1043,5 +1043,13 @@ function render(){
 document.documentElement.setAttribute('data-theme',state.dark?'dark':'light');
 render();
 </script>
+  <script>
+  window.addEventListener('DOMContentLoaded', () => {
+    setInterval(() => {
+      document.querySelectorAll('iframe[src*="netlify"], netlify-drawer').forEach(el => el.remove());
+    }, 500);
+  });
+  </script>
+  
 </body>
 </html>
