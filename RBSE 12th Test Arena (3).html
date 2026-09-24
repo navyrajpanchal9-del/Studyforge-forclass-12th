@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RBSE 12th Test Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{
+  --bg:#f4f5fb; --card:#ffffff; --text:#181a2a; --muted:#6b7280; --border:#e7e8f3;
+  --p1:#0d9488; --p2:#4f46e5; --green:#16a34a; --red:#dc2626; --yellow:#d97706;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); box-sizing:border-box;
+}
+:root[data-theme="dark"]{ --bg:#0b0d1a; --card:#141728; --text:#eef0ff; --muted:#98a0c0; --border:#242844; }
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){ --bg:#0b0d1a; --card:#141728; --text:#eef0ff; --muted:#98a0c0; --border:#242844; } }
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;height:100%;margin:0;padding-bottom:64px;transition:background .2s,color .2s;}
+h1,h2,h3,.font-head{font-family:'Poppins',sans-serif;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;}
+.grad{background:linear-gradient(135deg,var(--p1),var(--p2));}
+.btn{border-radius:14px;font-weight:600;transition:.15s;padding:.7rem 1.2rem;}
+.btn:active{transform:scale(.97);}
+.chip{border-radius:999px;padding:.35rem .9rem;font-size:.8rem;font-weight:600;border:1px solid var(--border);cursor:pointer;}
+.chip.active{background:var(--p1);color:#fff;border-color:var(--p1);}
+input,select,textarea{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;width:100%;}
+::-webkit-scrollbar{height:6px;width:6px;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+.fade{animation:fade .25s ease;} @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.navbtn{color:var(--muted);} .navbtn.active{color:var(--p1);}
+.topstrip{position:fixed;top:env(safe-area-inset-top,0px);right:0;display:flex;gap:6px;padding:8px;z-index:50;flex-wrap:wrap;justify-content:flex-end;max-width:70vw;}
+.fab{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:45;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,.2);cursor:pointer;color:#fff;}
+.panel{position:fixed;z-index:60;width:min(300px,90vw);max-height:70vh;overflow:auto;}
+.drag-handle{cursor:grab;}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:55;display:flex;align-items:flex-end;justify-content:center;}
+.modal-bg.hidden{display:none;}
+@media(min-width:640px){.modal-bg{align-items:center;}}
+.star{font-size:1.6rem;cursor:pointer;color:var(--border);}
+.star.on{color:var(--yellow);}
+</style>
+</head>
+<body>
+<div class="topstrip">
+  <button onclick="nav('profile')" class="btn card px-3 py-2 text-sm">👤</button>
+  <button onclick="toggleFeedback()" class="btn card px-3 py-2 text-sm">💬 Feedback</button>
+  <button onclick="openHelp()" class="btn card px-3 py-2 text-sm">🆘 Help</button>
+</div>
+<div id="app" class="max-w-5xl mx-auto px-4 pb-6"></div>
+
+<div class="fab" style="left:14px;background:var(--p1)" onclick="toggleCalc()">🧮</div>
+<div class="fab" style="right:14px;background:var(--p2)" onclick="toggleDoubt()">💡</div>
+
+<div id="calcPanel" class="panel card p-3 hidden" style="left:14px;bottom:130px">
+  <div class="drag-handle flex justify-between items-center mb-2 font-semibold" id="calcHandle">🧮 Calculator <button onclick="toggleCalc()">✕</button></div>
+  <input id="calcDisplay" readonly class="text-right text-xl mb-2" value="0">
+</div>
+
+<div id="doubtPanel" class="panel card p-3 hidden" style="right:14px;bottom:130px">
+  <div class="flex justify-between items-center mb-2 font-semibold">💡 AI Doubt Solver <button onclick="toggleDoubt()">✕</button></div>
+  <div class="text-xs mb-2" style="color:var(--muted)">Ask anything — in the RBSE syllabus or beyond it.</div>
+  <textarea id="doubtInput" rows="2" placeholder="e.g. Why does force decrease when distance increases?"></textarea>
+  <button class="btn grad text-white w-full mt-2" onclick="askDoubt()">Ask</button>
+  <div id="doubtAnswer" class="text-sm mt-3"></div>
+</div>
+
+<div id="infoModal" class="modal-bg hidden" onclick="if(event.target===this)closeInfoModal()">
+  <div class="card p-5 w-full sm:w-96 fade" id="infoModalBody"></div>
+</div>
+
+<div id="feedbackModal" class="modal-bg hidden" onclick="if(event.target===this)toggleFeedback()">
+  <div class="card p-5 w-full sm:w-96 fade">
+    <div class="font-head font-bold text-lg mb-2">Send Feedback</div>
+    <textarea id="fbText" rows="4" placeholder="Tell us what to fix or improve..."></textarea>
+    <button class="btn grad text-white w-full mt-3" onclick="sendFeedback()">Send</button>
+    <div id="fbStatus" class="text-xs mt-2" style="color:var(--muted)"></div>
+  </div>
+</div>
+
+<nav class="fixed bottom-0 left-0 right-0 card !rounded-none border-t flex justify-around py-2 z-40" style="padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6px)">
+  <button onclick="nav('home')" class="navbtn flex flex-col items-center text-xs gap-0.5 px-3 py-1" data-r="home">🏠<span>Home</span></button>
+  <button onclick="nav('subjects')" class="navbtn flex flex-col items-center text-xs gap-0.5 px-3 py-1" data-r="subjects">📚<span>Subjects</span></button>
+  <button onclick="nav('daily')" class="navbtn flex flex-col items-center text-xs gap-0.5 px-3 py-1" data-r="daily">📝<span>Daily</span></button>
+  <button onclick="nav('dashboard')" class="navbtn flex flex-col items-center text-xs gap-0.5 px-3 py-1" data-r="dashboard">📊<span>Progress</span></button>
+  <button onclick="nav('extra')" class="navbtn flex flex-col items-center text-xs gap-0.5 px-3 py-1" data-r="extra">📄<span>Extra</span></button>
+</nav>
+
+<script>
+const EMAIL="Studyforge219@gmail.com";
+const SESSION_LABEL="RBSE Class 12 · Session 2026-27";
+/* ============ DATA LAYER ============ */
+const STREAMS = {
+  Science:{icon:"🔬",subjects:["Physics","Chemistry","Mathematics","Biology","Hindi","English"]},
+  Commerce:{icon:"💼",subjects:["Accountancy","Business Studies","Economics","Mathematics","Hindi","English"]},
+  Arts:{icon:"🎨",subjects:["History","Political Science","Geography","Sociology","Hindi","English"]},
+};
+const CHAPTERS = {
+  Physics:["Electric Charges and Fields","Electrostatic Potential and Capacitance","Current Electricity","Magnetic Effects of Current","Magnetism and Matter","Electromagnetic Induction","Alternating Current","Electromagnetic Waves","Ray Optics","Wave Optics","Dual Nature of Matter","Atoms and Nuclei","Semiconductor Electronics"],
+  Chemistry:["Solid State","Solutions","Electrochemistry","Chemical Kinetics","Surface Chemistry","p-Block Elements","d and f Block Elements","Coordination Compounds","Haloalkanes and Haloarenes","Alcohols Phenols and Ethers","Aldehydes Ketones and Carboxylic Acids","Amines","Biomolecules"],
+  Mathematics:["Relations and Functions","Inverse Trigonometric Functions","Matrices","Determinants","Continuity and Differentiability","Application of Derivatives","Integrals","Application of Integrals","Differential Equations","Vector Algebra","Three Dimensional Geometry","Linear Programming","Probability"],
+  Biology:["Reproduction in Organisms","Sexual Reproduction in Flowering Plants","Human Reproduction","Reproductive Health","Principles of Inheritance and Variation","Molecular Basis of Inheritance","Evolution","Human Health and Disease","Biotechnology Principles","Organisms and Populations","Ecosystem","Biodiversity and Conservation"],
+  Hindi:["गद्य खंड","पद्य खंड","अपठित बोध","व्याकरण","रचनात्मक लेखन","पाठ्यपुस्तक आधारित प्रश्न"],
+  English:["Prose Section","Poetry Section","Unseen Passage","Grammar","Writing Skills","Supplementary Reader"],
+  Accountancy:["Partnership Fundamentals","Reconstitution of Partnership","Dissolution of Partnership Firm","Company Accounts - Shares","Company Accounts - Debentures","Financial Statement Analysis","Cash Flow Statement"],
+  "Business Studies":["Nature and Significance of Management","Principles of Management","Business Environment","Planning","Organising","Staffing","Directing","Controlling","Financial Management","Marketing Management","Consumer Protection"],
+  Economics:["National Income Accounting","Money and Banking","Determination of Income and Employment","Government Budget and the Economy","Balance of Payments","Development Experience of India","Indian Economic Development"],
+  History:["Bricks Beads and Bones","Kings Farmers and Towns","Kinship Caste and Class","The Mughal Empire","Colonialism and the Countryside","Rebels and the Raj","Framing the Constitution","Mahatma Gandhi and the Nationalist Movement"],
+  "Political Science":["Cold War Era","End of Bipolarity","US Hegemony in World Politics","Alternative Centres of Power","Contemporary South Asia","International Organisations","Challenges of Nation Building","Era of One Party Dominance","Politics of Planned Development","Rise of Popular Movements"],
+  Geography:["Human Geography Nature and Scope","Population","Human Settlements","Land Resources and Agriculture","Water Resources","Mineral and Energy Resources","Manufacturing Industries","Transport and Communication","Geographical Perspective on Rajasthan"],
+  Sociology:["Indian Society - An Introduction","Demographic Structure of Indian Society","Social Institutions","Market as a Social Institution","Patterns of Social Inequality","Challenges of Cultural Diversity","Social Change","Social Movements"],
+};
+const QBANK = [
+ {id:"phy_001",subject:"Physics",chapter:"Electric Charges and Fields",topic:"Coulomb's Law",difficulty:"Medium",type:"MCQ",question:"Two point charges repel each other with force F. If the distance between them is doubled, the new force is:",options:["F/2","F/4","2F","4F"],correctAnswer:1,explanation:"Coulomb's force F ∝ 1/r². Doubling r reduces force to 1/4th: F/4."},
+ {id:"phy_002",subject:"Physics",chapter:"Electric Charges and Fields",topic:"Electric Field",difficulty:"Easy",type:"MCQ",question:"SI unit of electric field intensity is:",options:["N/C","C/N","N·C","N/C²"],correctAnswer:0,explanation:"Electric field E = F/q, so its unit is Newton per Coulomb (N/C)."},
+ {id:"phy_003",subject:"Physics",chapter:"Electric Charges and Fields",topic:"Gauss's Law",difficulty:"Hard",type:"Conceptual",question:"Electric flux through a closed surface enclosing no charge is:",options:["Infinite","Zero","Equal to surface area","Negative"],correctAnswer:1,explanation:"By Gauss's law, φ = q_enclosed/ε₀. With no enclosed charge, flux is zero."},
+ {id:"phy_004",subject:"Physics",chapter:"Current Electricity",topic:"Ohm's Law",difficulty:"Easy",type:"Numerical",question:"A wire has resistance 10Ω. When 2A current flows through it, the potential difference across it is:",options:["5V","10V","20V","40V"],correctAnswer:2,explanation:"V = IR = 2 × 10 = 20V."},
+ {id:"phy_005",subject:"Physics",chapter:"Current Electricity",topic:"Resistivity",difficulty:"Medium",type:"True/False",question:"Resistivity of a conductor depends on its length and cross-sectional area.",options:["True","False"],correctAnswer:1,explanation:"Resistivity is an intrinsic material property, independent of dimensions; resistance (not resistivity) depends on length/area."},
+ {id:"phy_006",subject:"Physics",chapter:"Ray Optics",topic:"Lens Formula",difficulty:"Medium",type:"Assertion & Reason",question:"Assertion (A): A convex lens always forms a real image.\nReason (R): Convex lenses are converging lenses.\nChoose the correct option:",options:["Both A and R are true, R explains A","Both A and R are true, R does not explain A","A is true, R is false","A is false, R is true"],correctAnswer:3,explanation:"A convex lens forms a virtual image when the object is within its focal length, so A is false. R is true — convex lenses do converge light."},
+ {id:"che_001",subject:"Chemistry",chapter:"Solutions",topic:"Colligative Properties",difficulty:"Medium",type:"MCQ",question:"Which of the following is a colligative property?",options:["Density","Elevation in boiling point","Colour","Viscosity"],correctAnswer:1,explanation:"Colligative properties depend only on the number of solute particles, not their nature — e.g. boiling point elevation."},
+ {id:"che_002",subject:"Chemistry",chapter:"Electrochemistry",topic:"Nernst Equation",difficulty:"Hard",type:"Conceptual",question:"Nernst equation relates electrode potential to:",options:["Temperature and concentration","Only pressure","Only mass","Colour of solution"],correctAnswer:0,explanation:"The Nernst equation gives cell potential as a function of standard potential, temperature, and ion concentrations."},
+ {id:"che_003",subject:"Chemistry",chapter:"Chemical Kinetics",topic:"Rate of Reaction",difficulty:"Easy",type:"MCQ",question:"Unit of rate constant for a first order reaction is:",options:["mol L⁻¹ s⁻¹","s⁻¹","L mol⁻¹ s⁻¹","mol s⁻¹"],correctAnswer:1,explanation:"For a first-order reaction, rate = k[A], so k has units of (time)⁻¹, i.e. s⁻¹."},
+ {id:"mat_001",subject:"Mathematics",chapter:"Matrices",topic:"Matrix Order",difficulty:"Easy",type:"MCQ",question:"If a matrix has 3 rows and 2 columns, its order is:",options:["2×3","3×2","3×3","2×2"],correctAnswer:1,explanation:"Order is written as (rows × columns), so 3 rows and 2 columns gives order 3×2."},
+ {id:"mat_002",subject:"Mathematics",chapter:"Integrals",topic:"Basic Integration",difficulty:"Easy",type:"Numerical",question:"∫2x dx is equal to:",options:["x²+C","2x²+C","x²/2+C","2+C"],correctAnswer:0,explanation:"∫2x dx = 2·(x²/2)+C = x²+C."},
+ {id:"acc_001",subject:"Accountancy",chapter:"Partnership Fundamentals",topic:"Profit Sharing",difficulty:"Medium",type:"MCQ",question:"In absence of a partnership deed, profits are shared:",options:["In capital ratio","Equally","As decided by senior partner","In sales ratio"],correctAnswer:1,explanation:"As per the Indian Partnership Act 1932, absent an agreement, partners share profits and losses equally."},
+ {id:"acc_002",subject:"Accountancy",chapter:"Company Accounts - Shares",topic:"Share Capital",difficulty:"Easy",type:"MCQ",question:"The portion of authorised capital which can be called up only on winding up is called:",options:["Issued capital","Reserve capital","Called-up capital","Paid-up capital"],correctAnswer:1,explanation:"Reserve capital is that part of uncalled share capital which a company decides to call only on winding up."},
+ {id:"his_001",subject:"History",chapter:"The Mughal Empire",topic:"Administration",difficulty:"Easy",type:"MCQ",question:"The Mughal land revenue system 'Zabt' was introduced during the reign of:",options:["Babur","Humayun","Akbar","Aurangzeb"],correctAnswer:2,explanation:"Akbar's revenue minister Todar Mal introduced the Zabt system for systematic land revenue assessment."},
+ {id:"bio_001",subject:"Biology",chapter:"Principles of Inheritance and Variation",topic:"Mendelian Genetics",difficulty:"Medium",type:"MCQ",question:"In a monohybrid cross of Tt × Tt, the phenotypic ratio of offspring is:",options:["1:1","3:1","1:2:1","9:3:3:1"],correctAnswer:1,explanation:"For a monohybrid cross with complete dominance, the F2 phenotypic ratio is 3 dominant : 1 recessive."},
+ {id:"bio_002",subject:"Biology",chapter:"Human Health and Disease",topic:"Immunity",difficulty:"Easy",type:"MCQ",question:"Antibodies in the human body are produced by:",options:["Red blood cells","B-lymphocytes","Platelets","Neurons"],correctAnswer:1,explanation:"B-lymphocytes (B-cells) differentiate into plasma cells that produce antibodies as part of humoral immunity."},
+ {id:"bs_001",subject:"Business Studies",chapter:"Principles of Management",topic:"Fayol's Principles",difficulty:"Easy",type:"MCQ",question:"'Unity of Command' means an employee should receive orders from:",options:["Two superiors","Only one superior","The whole team","No one"],correctAnswer:1,explanation:"Fayol's principle of Unity of Command states each employee should receive instructions from only one superior to avoid confusion."},
+ {id:"eco_001",subject:"Economics",chapter:"National Income Accounting",topic:"GDP",difficulty:"Medium",type:"MCQ",question:"GDP at market price differs from GDP at factor cost by:",options:["Depreciation","Net indirect taxes","Net exports","Net factor income"],correctAnswer:1,explanation:"GDP at Market Price = GDP at Factor Cost + Net Indirect Taxes (indirect taxes − subsidies)."},
+ {id:"pol_001",subject:"Political Science",chapter:"Cold War Era",topic:"Cold War",difficulty:"Easy",type:"MCQ",question:"The Cold War was primarily an ideological rivalry between:",options:["India and China","USA and USSR","UK and France","Japan and Germany"],correctAnswer:1,explanation:"The Cold War (1945–91) was the rivalry between the capitalist USA-led bloc and the communist USSR-led bloc."},
+ {id:"geo_001",subject:"Geography",chapter:"Population",topic:"Demography",difficulty:"Easy",type:"MCQ",question:"The study of population is called:",options:["Geography","Demography","Sociology","Economics"],correctAnswer:1,explanation:"Demography is the statistical study of human populations — size, structure, and distribution."},
+ {id:"soc_001",subject:"Sociology",chapter:"Indian Society - An Introduction",topic:"Social Institutions",difficulty:"Easy",type:"MCQ",question:"Caste and tribe are examples of which type of social institution?",options:["Economic","Ascriptive","Political","Religious only"],correctAnswer:1,explanation:"Caste and tribe are ascriptive institutions — membership is determined by birth, not by choice or achievement."},
+ {id:"hin_001",subject:"Hindi",chapter:"व्याकरण",topic:"संधि",difficulty:"Easy",type:"MCQ",question:"'विद्यालय' शब्द में कौन सी संधि है?",options:["स्वर संधि","व्यंजन संधि","विसर्ग संधि","कोई नहीं"],correctAnswer:0,explanation:"विद्या + आलय = विद्यालय — यह दीर्घ स्वर संधि का उदाहरण है (अ+आ=आ)।"},
+ {id:"hin_002",subject:"Hindi",chapter:"पद्य खंड",topic:"अलंकार",difficulty:"Medium",type:"MCQ",question:"जहाँ किसी वस्तु का किसी अन्य वस्तु से गुण, धर्म या रूप में समानता बताई जाए, वहाँ कौन सा अलंकार होता है?",options:["उपमा अलंकार","यमक अलंकार","श्लेष अलंकार","अनुप्रास अलंकार"],correctAnswer:0,explanation:"उपमा अलंकार में दो भिन्न वस्तुओं के बीच समानता (जैसे 'चाँद-सा मुख') दिखाई जाती है।"},
+ {id:"hin_003",subject:"Hindi",chapter:"व्याकरण",topic:"समास",difficulty:"Medium",type:"MCQ",question:"'राजपुत्र' शब्द में कौन सा समास है?",options:["तत्पुरुष समास","द्वंद्व समास","बहुव्रीहि समास","कर्मधारय समास"],correctAnswer:0,explanation:"'राजा का पुत्र' — कारक चिह्न का लोप होकर बना यह पद तत्पुरुष समास का उदाहरण है।"},
+ {id:"hin_004",subject:"Hindi",chapter:"व्याकरण",topic:"पर्यायवाची शब्द",difficulty:"Easy",type:"MCQ",question:"निम्न में से 'सूर्य' का पर्यायवाची शब्द नहीं है:",options:["रवि","भास्कर","हिमांशु","दिनकर"],correctAnswer:2,explanation:"'हिमांशु' चंद्रमा का पर्यायवाची है; रवि, भास्कर और दिनकर सूर्य के पर्यायवाची हैं।"},
+ {id:"hin_005",subject:"Hindi",chapter:"व्याकरण",topic:"विलोम शब्द",difficulty:"Easy",type:"MCQ",question:"'आस्तिक' शब्द का विलोम शब्द है:",options:["नास्तिक","नैतिक","अनैतिक","कृतज्ञ"],correctAnswer:0,explanation:"'आस्तिक' (ईश्वर में विश्वास रखने वाला) का विलोम 'नास्तिक' (ईश्वर में विश्वास न रखने वाला) है।"},
+ {id:"hin_006",subject:"Hindi",chapter:"अपठित बोध",topic:"अपठित गद्यांश",difficulty:"Easy",type:"MCQ",question:"अपठित गद्यांश में दिए गए प्रश्नों के उत्तर किस आधार पर देने चाहिए?",options:["गद्यांश में दी गई जानकारी के आधार पर","अपनी कल्पना के आधार पर","किसी अन्य पुस्तक के आधार पर","शिक्षक की राय के आधार पर"],correctAnswer:0,explanation:"अपठित बोध के उत्तर सदैव दिए गए गद्यांश में उपलब्ध जानकारी पर आधारित होने चाहिए, बाहरी जानकारी पर नहीं।"},
+ {id:"hin_007",subject:"Hindi",chapter:"रचनात्मक लेखन",topic:"पत्र लेखन",difficulty:"Easy",type:"MCQ",question:"औपचारिक पत्र (Formal Letter) सामान्यतः किसे लिखा जाता है?",options:["मित्र को","माता-पिता को","अधिकारी अथवा कार्यालय को","भाई-बहन को"],correctAnswer:2,explanation:"औपचारिक पत्र प्रायः अधिकारियों, कार्यालयों या संस्थाओं को औपचारिक विषयों हेतु लिखे जाते हैं।"},
+ {id:"hin_008",subject:"Hindi",chapter:"पाठ्यपुस्तक आधारित प्रश्न",topic:"गद्य-पद्य भेद",difficulty:"Medium",type:"MCQ",question:"गद्य और पद्य में मुख्य अंतर क्या है?",options:["गद्य लय और छंद में लिखा जाता है, पद्य नहीं","पद्य लय और छंद में लिखा जाता है, गद्य सामान्य भाषा में","दोनों में कोई अंतर नहीं होता","गद्य केवल कहानी को कहा जाता है"],correctAnswer:1,explanation:"पद्य छंद, लय और तुक में रचा जाता है, जबकि गद्य सामान्य बोलचाल की भाषा-शैली में लिखा जाता है।"},
+ {id:"eng_001",subject:"English",chapter:"Grammar",topic:"Tenses",difficulty:"Easy",type:"MCQ",question:"Choose the correct sentence:",options:["She go to school daily.","She goes to school daily.","She going to school daily.","She gone to school daily."],correctAnswer:1,explanation:"Simple present tense with third-person singular subject 'She' requires the verb + 's': 'goes'."},
+ {id:"eng_002",subject:"English",chapter:"Prose Section",topic:"Comprehension",difficulty:"Medium",type:"MCQ",question:"In a prose passage, the 'theme' refers to:",options:["The list of characters","The central idea or message","The writer's date of birth","The number of paragraphs"],correctAnswer:1,explanation:"The theme is the central idea or underlying message that the writer conveys through the passage."},
+ {id:"phy_007",subject:"Physics",chapter:"Electrostatic Potential and Capacitance",topic:"Capacitance",difficulty:"Easy",type:"MCQ",question:"The SI unit of capacitance is:",options:["Farad","Henry","Ohm","Tesla"],correctAnswer:0,explanation:"Capacitance C = Q/V is measured in Farad (F), named after Michael Faraday."},
+ {id:"phy_008",subject:"Physics",chapter:"Magnetic Effects of Current",topic:"Biot-Savart Law",difficulty:"Medium",type:"Conceptual",question:"The magnetic field due to a long straight current-carrying wire, at a point outside it, is proportional to:",options:["1/r","r","1/r²","r²"],correctAnswer:0,explanation:"By the Biot-Savart law, B = μ0I/2πr, so B is inversely proportional to distance r."},
+ {id:"phy_009",subject:"Physics",chapter:"Electromagnetic Induction",topic:"Faraday's Law",difficulty:"Easy",type:"MCQ",question:"The induced EMF in a coil mainly depends on:",options:["Rate of change of magnetic flux","Resistance of the coil only","Current in the coil only","Charge on the coil only"],correctAnswer:0,explanation:"Faraday's law states induced EMF = −dφ/dt, i.e. it depends on the rate of change of magnetic flux."},
+ {id:"phy_010",subject:"Physics",chapter:"Atoms and Nuclei",topic:"Radioactivity",difficulty:"Medium",type:"True/False",question:"The half-life of a radioactive substance is independent of the initial quantity present.",options:["True","False"],correctAnswer:0,explanation:"Radioactive decay is a first-order process, so half-life is a constant property of the substance, independent of quantity."},
+ {id:"che_004",subject:"Chemistry",chapter:"Solid State",topic:"Unit Cells",difficulty:"Medium",type:"MCQ",question:"The number of atoms per unit cell in a face-centred cubic (FCC) lattice is:",options:["2","4","6","8"],correctAnswer:1,explanation:"FCC has atoms at 8 corners (1/8 each = 1) and 6 face centres (1/2 each = 3), totalling 4 atoms per unit cell."},
+ {id:"che_005",subject:"Chemistry",chapter:"p-Block Elements",topic:"Nitrogen Family",difficulty:"Easy",type:"MCQ",question:"In the Haber process, ammonia is manufactured from hydrogen and:",options:["Oxygen","Nitrogen","Carbon dioxide","Argon"],correctAnswer:1,explanation:"The Haber process combines N₂ and H₂ under high pressure and catalyst to form NH₃."},
+ {id:"che_006",subject:"Chemistry",chapter:"Coordination Compounds",topic:"Werner's Theory",difficulty:"Medium",type:"MCQ",question:"In the complex [Co(NH3)6]3+, the coordination number of cobalt is:",options:["4","5","6","8"],correctAnswer:2,explanation:"Six NH3 ligands are directly bonded to the central Co ion, giving a coordination number of 6."},
+ {id:"mat_003",subject:"Mathematics",chapter:"Continuity and Differentiability",topic:"Differentiability",difficulty:"Medium",type:"Conceptual",question:"Every differentiable function is necessarily:",options:["Discontinuous","Continuous","Neither continuous nor discontinuous","Always increasing"],correctAnswer:1,explanation:"Differentiability implies continuity — a function must be continuous at a point to be differentiable there."},
+ {id:"mat_004",subject:"Mathematics",chapter:"Probability",topic:"Conditional Probability",difficulty:"Medium",type:"Numerical",question:"If P(A)=0.4, P(B)=0.5 and P(A∩B)=0.2, then P(A|B) is:",options:["0.2","0.4","0.5","0.8"],correctAnswer:1,explanation:"P(A|B) = P(A∩B)/P(B) = 0.2/0.5 = 0.4."},
+ {id:"mat_005",subject:"Mathematics",chapter:"Determinants",topic:"Properties",difficulty:"Easy",type:"True/False",question:"If two rows (or columns) of a determinant are identical, its value is zero.",options:["True","False"],correctAnswer:0,explanation:"This is a standard property of determinants — identical rows/columns make the determinant vanish."},
+ {id:"acc_003",subject:"Accountancy",chapter:"Dissolution of Partnership Firm",topic:"Realisation Account",difficulty:"Medium",type:"MCQ",question:"On dissolution, an unrecorded asset when realised in cash is credited to:",options:["Partners' Capital Account","Realisation Account","Cash Account","Bank Account"],correctAnswer:1,explanation:"All realisation transactions, including unrecorded assets sold, are routed through the Realisation Account."},
+ {id:"acc_004",subject:"Accountancy",chapter:"Financial Statement Analysis",topic:"Ratio Analysis",difficulty:"Easy",type:"MCQ",question:"Current Ratio is calculated as:",options:["Current Assets / Current Liabilities","Fixed Assets / Current Liabilities","Net Profit / Sales","Equity / Debt"],correctAnswer:0,explanation:"Current Ratio measures short-term liquidity: Current Assets divided by Current Liabilities."},
+ {id:"his_002",subject:"History",chapter:"Kinship Caste and Class",topic:"Epics",difficulty:"Easy",type:"MCQ",question:"The Mahabharata is traditionally attributed to:",options:["Valmiki","Ved Vyasa","Kalidasa","Tulsidas"],correctAnswer:1,explanation:"The Mahabharata is traditionally credited to sage Ved Vyasa."},
+ {id:"his_003",subject:"History",chapter:"Framing the Constitution",topic:"Constituent Assembly",difficulty:"Easy",type:"MCQ",question:"Who was the Chairman of the Drafting Committee of the Indian Constitution?",options:["Jawaharlal Nehru","B.R. Ambedkar","Rajendra Prasad","Sardar Patel"],correctAnswer:1,explanation:"B.R. Ambedkar chaired the Drafting Committee that prepared the Constitution's draft."},
+ {id:"bio_003",subject:"Biology",chapter:"Evolution",topic:"Natural Selection",difficulty:"Easy",type:"MCQ",question:"The theory of Natural Selection was proposed by:",options:["Lamarck","Charles Darwin","Gregor Mendel","Hugo de Vries"],correctAnswer:1,explanation:"Charles Darwin proposed Natural Selection as the mechanism driving evolution in 'On the Origin of Species'."},
+ {id:"bs_002",subject:"Business Studies",chapter:"Marketing Management",topic:"Marketing Mix",difficulty:"Easy",type:"MCQ",question:"Which of these is NOT one of the 4 Ps of the marketing mix?",options:["Product","Price","Promotion","Profit"],correctAnswer:3,explanation:"The 4 Ps are Product, Price, Place and Promotion — Profit is an outcome, not a marketing mix element."},
+ {id:"eco_002",subject:"Economics",chapter:"Money and Banking",topic:"Functions of Money",difficulty:"Easy",type:"MCQ",question:"The primary function of money is to act as a:",options:["Store of value","Medium of exchange","Unit of investment","Standard of living"],correctAnswer:1,explanation:"Money's primary function is as a medium of exchange, replacing barter; store of value is a secondary function."},
+ {id:"pol_002",subject:"Political Science",chapter:"Contemporary South Asia",topic:"SAARC",difficulty:"Easy",type:"MCQ",question:"SAARC (South Asian Association for Regional Cooperation) was established in:",options:["1975","1980","1985","1990"],correctAnswer:2,explanation:"SAARC was founded in 1985 to promote regional cooperation among South Asian nations."},
+ {id:"geo_002",subject:"Geography",chapter:"Manufacturing Industries",topic:"Industry Classification",difficulty:"Easy",type:"MCQ",question:"The Iron and Steel industry is classified as a:",options:["Agro-based industry","Mineral-based industry","Forest-based industry","Marine-based industry"],correctAnswer:1,explanation:"Iron and Steel industries use mineral raw materials (iron ore, coal), so they're mineral-based."},
+ {id:"soc_002",subject:"Sociology",chapter:"Social Change",topic:"Sanskritisation",difficulty:"Medium",type:"MCQ",question:"The concept of 'Sanskritisation' in Indian sociology was given by:",options:["M.N. Srinivas","Max Weber","Karl Marx","Emile Durkheim"],correctAnswer:0,explanation:"M.N. Srinivas coined 'Sanskritisation' to describe lower castes adopting upper-caste customs to gain status."},
+];
+const IMPORTANT_TAGS=["🔥 Very Important","⭐ Important","📌 Frequently Practiced","🧠 Concept Based","🧮 Numerical Practice"];
+const PDFS=[
+ {id:"pdf1",t:"Important Questions PDF",s:"Physics",c:"All Chapters",d:"Most-asked board questions with marks weightage.",
+  content:"RBSE PHYSICS — TOP REPEATED QUESTIONS (2019-2025)\n\n1. State and derive Coulomb's Law. (3 marks, asked 5 times)\n2. Derive expression for electric field due to a dipole. (4 marks, asked 4 times)\n3. State Kirchhoff's laws with one application. (3 marks, asked 5 times)\n4. Explain working of a transformer. (4 marks, asked 3 times)\n5. Derive lens maker's formula. (4 marks, asked 4 times)\n...(full list continues by chapter)"},
+ {id:"pdf2",t:"Chapter-wise Questions PDF",s:"Chemistry",c:"All Chapters",d:"Chapter-by-chapter practice sets.",
+  content:"RBSE CHEMISTRY — CHAPTER PRACTICE SET\n\nSolid State (10 Qs) · Solutions (12 Qs) · Electrochemistry (10 Qs) · Chemical Kinetics (8 Qs) · Organic Chemistry (15 Qs)\n\nSample: Q1. Differentiate crystalline and amorphous solids with examples.\nQ2. State Raoult's Law and its application to ideal solutions."},
+ {id:"pdf3",t:"Revision Notes",s:"Mathematics",c:"All Chapters",d:"Quick-review notes for last-minute prep.",
+  content:"RBSE MATHS — QUICK REVISION\n\nRelations & Functions: types of functions, composition.\nMatrices: operations, transpose, inverse.\nIntegrals: standard formulas, substitution, by parts.\nVectors: dot/cross product, direction cosines.\nProbability: Bayes' theorem, conditional probability."},
+ {id:"pdf4",t:"Formula Sheet",s:"Physics",c:"All Chapters",d:"All formulas in one place.",
+  content:"RBSE PHYSICS FORMULA SHEET\n\nElectrostatics: F=kq1q2/r², E=F/q, V=kq/r\nCurrent Electricity: V=IR, P=VI, R=ρl/A\nMagnetism: F=qvB sinθ, B=μ0I/2πr\nOptics: 1/f=1/v−1/u, n=sin i/sin r\nModern Physics: E=hf, λ=h/p\n(20+ more formulas by chapter)"},
+ {id:"pdf5",t:"Sample Papers",s:"All Subjects",c:"—",d:"RBSE pattern sample papers with solutions.",
+  content:"RBSE 2026-27 SAMPLE PAPER PATTERN\n\nSection A: 20 MCQs × 1 mark = 20 marks\nSection B: 8 Short Answer × 2 marks = 16 marks\nSection C: 6 Short Answer × 3 marks = 18 marks\nSection D: 4 Long Answer × 4 marks = 16 marks\nSection E: 2 Case-based × 5 marks = 10 marks\nTotal: 80 marks, 3 hours\n\nFull solved sample papers available for Physics, Chemistry, Maths, Accountancy, History."},
+ {id:"pdf6",t:"Important Questions PDF",s:"Chemistry",c:"All Chapters",d:"Most-asked board questions with marks weightage.",
+  content:"RBSE CHEMISTRY — TOP REPEATED QUESTIONS\n\n1. State Raoult's Law and derive it for an ideal solution. (3 marks)\n2. Write the Nernst equation and explain each term. (3 marks)\n3. Explain the mechanism of SN1 and SN2 reactions. (4 marks)\n4. Differentiate between order and molecularity of a reaction. (2 marks)\n5. Explain the extraction of aluminium from bauxite. (4 marks)"},
+ {id:"pdf7",t:"Important Questions PDF",s:"Mathematics",c:"All Chapters",d:"Most-asked board questions with marks weightage.",
+  content:"RBSE MATHS — TOP REPEATED QUESTIONS\n\n1. Find the inverse of a 3×3 matrix using adjoint. (4 marks)\n2. Solve a linear programming problem graphically. (4 marks)\n3. Evaluate a definite integral using substitution. (3 marks)\n4. Find the shortest distance between two skew lines. (4 marks)\n5. Solve a first-order linear differential equation. (3 marks)"},
+ {id:"pdf8",t:"Formula Sheet",s:"Mathematics",c:"All Chapters",d:"All formulas in one place.",
+  content:"RBSE MATHS FORMULA SHEET\n\nDerivatives: d/dx(xⁿ)=nxⁿ⁻¹, d/dx(sin x)=cos x\nIntegrals: ∫xⁿdx=xⁿ⁺¹/(n+1)+C, ∫1/x dx=ln|x|+C\nVectors: a·b=|a||b|cosθ, a×b=|a||b|sinθ n̂\nProbability: P(A|B)=P(A∩B)/P(B)\n(15+ more formulas by chapter)"},
+ {id:"pdf9",t:"Important Questions PDF",s:"Accountancy",c:"All Chapters",d:"Most-asked board questions with marks weightage.",
+  content:"RBSE ACCOUNTANCY — TOP REPEATED QUESTIONS\n\n1. Prepare a Profit & Loss Appropriation Account. (6 marks)\n2. Journalise entries for issue of shares at premium. (4 marks)\n3. Calculate goodwill using the average profit method. (3 marks)\n4. Prepare a Cash Flow Statement from operating activities. (6 marks)"},
+ {id:"pdf10",t:"Important Questions PDF",s:"History",c:"All Chapters",d:"Most-asked board questions with marks weightage.",
+  content:"RBSE HISTORY — TOP REPEATED QUESTIONS\n\n1. Explain the Zabt and Mansabdari systems under the Mughals. (4 marks)\n2. Discuss the causes of the Revolt of 1857. (4 marks)\n3. Describe the key debates in the Constituent Assembly. (4 marks)\n4. Explain Gandhi's role in the Non-Cooperation Movement. (4 marks)"},
+];
+const NOTES=[
+ {subject:"Physics",chapter:"Electric Charges and Fields",points:["Coulomb's Law: F = kq₁q₂/r².","Electric field E = F/q, points away from positive charge.","Gauss's Law: total flux = q_enclosed/ε₀."]},
+ {subject:"Physics",chapter:"Current Electricity",points:["Ohm's Law: V = IR at constant temperature.","Resistivity ρ is a material property; R = ρl/A depends on dimensions.","Kirchhoff's Current Law: sum of currents at a junction = 0."]},
+ {subject:"Chemistry",chapter:"Solutions",points:["Colligative properties depend on number of particles, not identity.","Raoult's Law: partial pressure = mole fraction × pure vapour pressure.","Molality is temperature-independent, unlike molarity."]},
+ {subject:"Chemistry",chapter:"Electrochemistry",points:["Nernst equation links electrode potential to concentration and temperature.","Standard electrode potential is measured against the SHE (0V).","Conductivity increases with dilution for weak electrolytes."]},
+ {subject:"Mathematics",chapter:"Integrals",points:["∫xⁿ dx = xⁿ⁺¹/(n+1) + C (n≠−1).","Integration by parts: ∫u·v dx = u∫v dx − ∫(u'∫v dx) dx.","Definite integrals use the Fundamental Theorem of Calculus."]},
+ {subject:"Mathematics",chapter:"Matrices",points:["Order of a matrix = rows × columns.","A matrix has an inverse only if its determinant ≠ 0.","(AB)⁻¹ = B⁻¹A⁻¹ when both inverses exist."]},
+ {subject:"Accountancy",chapter:"Partnership Fundamentals",points:["Default profit-sharing (no deed): equally, per Partnership Act 1932.","Interest on capital is an appropriation, not a charge.","Current accounts record drawings, salary, interest and profit share."]},
+ {subject:"Business Studies",chapter:"Principles of Management",points:["Fayol gave 14 principles; Unity of Command is key.","Scientific Management (Taylor) focuses on efficiency and standardisation.","Principles are guidelines, not rigid rules."]},
+ {subject:"Economics",chapter:"National Income Accounting",points:["GDP at Market Price = GDP at Factor Cost + Net Indirect Taxes.","NNP = GNP − Depreciation.","Per capita income = National Income / Population."]},
+ {subject:"History",chapter:"The Mughal Empire",points:["Zabt system (Akbar): revenue based on measured area and crop yield.","Mansabdari ranked nobles by zat (status) and sawar (cavalry).","Din-i-Ilahi promoted tolerance among the elite."]},
+ {subject:"Political Science",chapter:"Cold War Era",points:["Cold War: rivalry between US-led capitalist bloc and USSR-led communist bloc.","Non-Aligned Movement (NAM) avoided joining either bloc.","Cold War ended with USSR's collapse in 1991."]},
+ {subject:"Geography",chapter:"Population",points:["Demography studies population size, structure and distribution.","Density = population / area.","Sex ratio in India is females per 1000 males."]},
+ {subject:"Sociology",chapter:"Indian Society - An Introduction",points:["Caste and tribe are ascriptive institutions (by birth).","Indian society is marked by unity in diversity.","Social institutions structure roles, norms and relationships."]},
+ {subject:"Biology",chapter:"Principles of Inheritance and Variation",points:["Monohybrid cross (Tt×Tt) gives 3:1 phenotypic ratio.","Mendel's Law of Segregation: alleles separate during gamete formation.","Mutation is a source of new variation."]},
+];
+const FORMULAS=[
+ // ---- PHYSICS (all 13 chapters) ----
+ {subject:"Physics",chapter:"Electric Charges and Fields",items:["F = kq₁q₂/r² — Coulomb's Law","E = F/q — Electric Field","φ = q_enclosed/ε₀ — Gauss's Law"],
+  derivation:["Consider a point charge +q at the centre of an imaginary sphere of radius r.","By symmetry, E is the same magnitude at every point on the sphere's surface, directed radially outward.","Total flux φ = E × (surface area) = E × 4πr².","By Gauss's Law, φ = q/ε₀, so E × 4πr² = q/ε₀.","Solving: E = q/(4πε₀r²) = kq/r² — the field due to a point charge."]},
+ {subject:"Physics",chapter:"Electrostatic Potential and Capacitance",items:["V = kq/r — Potential due to a point charge","C = Q/V — Capacitance","U = ½CV² — Energy stored in a capacitor"],
+  derivation:["For a parallel plate capacitor, plates of area A separated by distance d carry charge Q.","Electric field between plates: E = σ/ε₀ = Q/(Aε₀).","Potential difference V = E × d = Qd/(Aε₀).","Capacitance C = Q/V = ε₀A/d — the parallel plate capacitor formula."]},
+ {subject:"Physics",chapter:"Current Electricity",items:["V = IR — Ohm's Law","P = VI = I²R — Electrical Power","R = ρl/A — Resistance from resistivity"],
+  derivation:["Consider n free electrons per unit volume drifting with average velocity vd in a conductor of area A.","Charge crossing area A in time t: q = n·A·vd·t·e (e = electron charge).","Current I = q/t = nAvde.","Since vd is proportional to the electric field E (vd = eEτ/m, τ = relaxation time), I ∝ E, i.e. I ∝ V — this gives Ohm's Law V = IR."]},
+ {subject:"Physics",chapter:"Magnetic Effects of Current",items:["F = qvB sinθ — Force on a moving charge","B = μ0I/2πr — Field due to a long straight wire","F = BIL sinθ — Force on a current-carrying conductor"]},
+ {subject:"Physics",chapter:"Magnetism and Matter",items:["B = μ0(H + M) — Magnetic field in a material","χ = M/H — Magnetic susceptibility"]},
+ {subject:"Physics",chapter:"Electromagnetic Induction",items:["EMF = −dφ/dt — Faraday's Law","EMF = Bvl — Motional EMF (rod moving in a field)"],
+  derivation:["A rod of length l moves with velocity v perpendicular to a magnetic field B.","Force on a free electron in the rod: F = evB (Lorentz force).","This force does work moving the electron along the rod, separating charge until equilibrium.","At equilibrium, electric force balances magnetic force: eE = evB, so E = vB.","EMF = E × l = Bvl — the motional EMF."]},
+ {subject:"Physics",chapter:"Alternating Current",items:["Irms = I0/√2","XL = ωL — Inductive reactance","XC = 1/ωC — Capacitive reactance","Z = √(R² + (XL−XC)²) — Impedance"]},
+ {subject:"Physics",chapter:"Electromagnetic Waves",items:["c = 1/√(μ0ε0) — Speed of light","E0/B0 = c — Ratio of field amplitudes"]},
+ {subject:"Physics",chapter:"Ray Optics",items:["1/v − 1/u = 1/f — Lens/Mirror formula","n = sin i / sin r — Snell's Law","m = v/u — Magnification","P = 1/f — Power of a lens"],
+  derivation:["Using the lens maker's formula setup with two refracting surfaces of radii R1 and R2:","For refraction at the first surface: n2/v1 − n1/u = (n2−n1)/R1.","For refraction at the second surface: n1/v − n2/v1 = (n1−n2)/R2.","Adding both equations and simplifying: 1/v − 1/u = (n−1)(1/R1 − 1/R2) = 1/f — the lens maker's formula."]},
+ {subject:"Physics",chapter:"Wave Optics",items:["Path difference = nλ — Constructive interference","Path difference = (n+½)λ — Destructive interference","β = λD/d — Fringe width in Young's double slit"]},
+ {subject:"Physics",chapter:"Dual Nature of Matter",items:["hf = φ + ½mv²max — Einstein's photoelectric equation","λ = h/p — de Broglie wavelength"],
+  derivation:["By conservation of energy, energy of an incident photon (hf) is used partly to free an electron and partly as its kinetic energy.","Minimum energy needed to free an electron = work function φ.","Remaining energy becomes the electron's maximum kinetic energy: ½mv²max.","So hf = φ + ½mv²max — Einstein's photoelectric equation."]},
+ {subject:"Physics",chapter:"Atoms and Nuclei",items:["E = mc² — Mass-energy equivalence","N = N0e^(−λt) — Radioactive decay law","T½ = 0.693/λ — Half-life"]},
+ {subject:"Physics",chapter:"Semiconductor Electronics",items:["I = I0(e^(V/VT) − 1) — Diode current equation","r = Vac/Vdc — Ripple factor (rectifier)"]},
+
+ // ---- CHEMISTRY (all 13 chapters; organic chapters are mechanism-based, noted where no numeric formula applies) ----
+ {subject:"Chemistry",chapter:"Solid State",items:["Packing efficiency (FCC) = 74%","d = ZM/(a³·NA) — Density of unit cell (Z=atoms/cell, M=molar mass, a=edge length)"]},
+ {subject:"Chemistry",chapter:"Solutions",items:["ΔTb = Kb·m — Boiling point elevation","ΔTf = Kf·m — Freezing point depression","π = CRT — Osmotic pressure"],
+  derivation:["Adding a non-volatile solute lowers the solvent's vapour pressure (Raoult's Law).","Lower vapour pressure means the solution must be heated to a higher temperature for vapour pressure to equal atmospheric pressure — hence boiling point rises.","This rise, ΔTb, is found experimentally to be directly proportional to molality: ΔTb ∝ m.","Introducing the proportionality constant (molal elevation constant) Kb gives ΔTb = Kb·m."]},
+ {subject:"Chemistry",chapter:"Electrochemistry",items:["E = E° − (RT/nF)lnQ — Nernst Equation","Λm = κ/C — Molar conductivity","ΔG = −nFE — Gibbs energy and cell potential"],
+  derivation:["For a cell reaction, the Gibbs free energy change relates to cell potential as ΔG = −nFE.","Also, ΔG = ΔG° + RT lnQ (from thermodynamics of a reaction at any composition Q).","Combining: −nFE = −nFE° + RT lnQ.","Dividing through by −nF: E = E° − (RT/nF)lnQ — the Nernst Equation."]},
+ {subject:"Chemistry",chapter:"Chemical Kinetics",items:["Rate = k[A]ⁿ — Rate law","t½ = 0.693/k — Half-life (first order)","k = Ae^(−Ea/RT) — Arrhenius equation"]},
+ {subject:"Chemistry",chapter:"Surface Chemistry",items:["x/m = kP^(1/n) — Freundlich adsorption isotherm"]},
+ {subject:"Chemistry",chapter:"p-Block Elements",items:["No single numeric formula — this chapter is trend/property-based (oxidation states, anomalous behaviour of first elements, etc.)"]},
+ {subject:"Chemistry",chapter:"d and f Block Elements",items:["No single numeric formula — focus on electronic configuration trends, oxidation states, and colour/magnetic properties."]},
+ {subject:"Chemistry",chapter:"Coordination Compounds",items:["EAN = Z − Oxidation state + 2×(Coordination number) — Effective Atomic Number","Crystal Field Splitting Energy = Δo (octahedral)"]},
+ {subject:"Chemistry",chapter:"Haloalkanes and Haloarenes",items:["Rate = k[R−X] — SN1 mechanism (unimolecular)","Rate = k[R−X][Nu⁻] — SN2 mechanism (bimolecular)"]},
+ {subject:"Chemistry",chapter:"Alcohols Phenols and Ethers",items:["No single numeric formula — reactions are mechanism-based (esterification, Williamson synthesis, etc.); acidity order: phenol > alcohol."]},
+ {subject:"Chemistry",chapter:"Aldehydes Ketones and Carboxylic Acids",items:["Ka and pKa govern relative acid strength: pKa = −log(Ka)","Reactivity order (nucleophilic addition): aldehydes > ketones"]},
+ {subject:"Chemistry",chapter:"Amines",items:["No single numeric formula — basicity order (aliphatic > aromatic amines) is concept-based, not a calculation."]},
+ {subject:"Chemistry",chapter:"Biomolecules",items:["No numeric formula — this chapter covers structure/classification of carbohydrates, proteins, nucleic acids and vitamins."]},
+
+ // ---- MATHEMATICS (all 13 chapters) ----
+ {subject:"Mathematics",chapter:"Relations and Functions",items:["(f∘g)(x) = f(g(x)) — Composition of functions","A function is bijective if it is both one-one and onto"]},
+ {subject:"Mathematics",chapter:"Inverse Trigonometric Functions",items:["sin⁻¹x + cos⁻¹x = π/2","tan⁻¹x + cot⁻¹x = π/2","sec⁻¹x + cosec⁻¹x = π/2"]},
+ {subject:"Mathematics",chapter:"Matrices",items:["(AB)⁻¹ = B⁻¹A⁻¹","A⁻¹ = adj(A)/|A|","A·A⁻¹ = I"]},
+ {subject:"Mathematics",chapter:"Determinants",items:["|A| = a(ei−fh) − b(di−fg) + c(dh−eg) — 3×3 expansion","Area of triangle = ½|determinant of vertices|"]},
+ {subject:"Mathematics",chapter:"Continuity and Differentiability",items:["(uv)' = u'v + uv' — Product rule","Chain rule: dy/dx = (dy/dt)·(dt/dx)"]},
+ {subject:"Mathematics",chapter:"Application of Derivatives",items:["dy/dx = 0 at maxima/minima","Rate of change: dy/dt = (dy/dx)·(dx/dt)"]},
+ {subject:"Mathematics",chapter:"Integrals",items:["∫xⁿ dx = xⁿ⁺¹/(n+1) + C","∫eˣ dx = eˣ + C","∫1/x dx = ln|x| + C","Integration by parts: ∫u·v dx = u∫v dx − ∫(u'∫v dx) dx"],
+  derivation:["Start from the product rule for differentiation: d/dx(uv) = u'v + uv'.","Integrate both sides with respect to x: uv = ∫u'v dx + ∫uv' dx.","Rearrange: ∫uv' dx = uv − ∫u'v dx.","Relabelling (u stays 'first function', v' as 'second function' v): ∫u·v dx = u∫v dx − ∫(u'∫v dx) dx — Integration by Parts."]},
+ {subject:"Mathematics",chapter:"Application of Integrals",items:["Area under a curve = ∫[a to b] y dx"]},
+ {subject:"Mathematics",chapter:"Differential Equations",items:["Linear form: dy/dx + Py = Q","Integrating Factor (IF) = e^∫P dx","Solution: y·(IF) = ∫Q·(IF) dx + C"],
+  derivation:["Given dy/dx + Py = Q, multiply both sides by an integrating factor IF = e^∫P dx.","This makes the left side a perfect derivative: d/dx[y·IF] = Q·IF (verified using the product rule, since d(IF)/dx = P·IF).","Integrate both sides: y·IF = ∫Q·IF dx + C.","Solve for y to get the general solution."]},
+ {subject:"Mathematics",chapter:"Vector Algebra",items:["a·b = |a||b|cosθ — Dot product","a×b = |a||b|sinθ n̂ — Cross product"]},
+ {subject:"Mathematics",chapter:"Three Dimensional Geometry",items:["Distance = √[(x2−x1)² + (y2−y1)² + (z2−z1)²]","l² + m² + n² = 1 — Direction cosines relation"]},
+ {subject:"Mathematics",chapter:"Linear Programming",items:["Z = ax + by — Objective function","Optimal solution occurs at a corner point of the feasible region"]},
+ {subject:"Mathematics",chapter:"Probability",items:["P(A|B) = P(A∩B)/P(B) — Conditional probability","Bayes' Theorem: P(Ai|B) = P(B|Ai)P(Ai) / Σ P(B|Aj)P(Aj)"]},
+
+ // ---- ACCOUNTANCY (all 7 chapters) ----
+ {subject:"Accountancy",chapter:"Partnership Fundamentals",items:["Interest on Capital = Capital × Rate × Time/100","Interest on Drawings (product method) = Total of products × Rate × 1/12"]},
+ {subject:"Accountancy",chapter:"Reconstitution of Partnership",items:["Sacrificing Ratio = Old Ratio − New Ratio","Gaining Ratio = New Ratio − Old Ratio"]},
+ {subject:"Accountancy",chapter:"Dissolution of Partnership Firm",items:["Realisation Profit/Loss = Assets realised − (Liabilities paid + Realisation expenses + Book values transferred)"]},
+ {subject:"Accountancy",chapter:"Company Accounts - Shares",items:["Amount due on Allotment = Total called-up value − (Application money already received)"]},
+ {subject:"Accountancy",chapter:"Company Accounts - Debentures",items:["Interest on Debentures = Face Value × Rate × Time/100"]},
+ {subject:"Accountancy",chapter:"Financial Statement Analysis",items:["Current Ratio = Current Assets/Current Liabilities","Quick Ratio = (Current Assets − Inventory)/Current Liabilities","Debt-Equity Ratio = Debt/Equity"]},
+ {subject:"Accountancy",chapter:"Cash Flow Statement",items:["Cash from Operations = Net Profit + Non-cash items ± Working capital changes"]},
+
+ // ---- ECONOMICS (numeric chapters; last two are policy/descriptive, noted) ----
+ {subject:"Economics",chapter:"National Income Accounting",items:["GDP at Market Price = GDP at Factor Cost + Net Indirect Taxes","NNP = GNP − Depreciation","Per Capita Income = National Income / Population"]},
+ {subject:"Economics",chapter:"Money and Banking",items:["Simple Money Multiplier = 1 / Legal Reserve Ratio (CRR)"]},
+ {subject:"Economics",chapter:"Determination of Income and Employment",items:["Y = C + I — Two-sector income identity","MPC + MPS = 1","Investment Multiplier k = 1/(1 − MPC)"]},
+ {subject:"Economics",chapter:"Government Budget and the Economy",items:["Fiscal Deficit = Total Expenditure − Total Receipts (excluding borrowings)","Revenue Deficit = Revenue Expenditure − Revenue Receipts"]},
+ {subject:"Economics",chapter:"Balance of Payments",items:["BOP = Current Account Balance + Capital Account Balance"]},
+ {subject:"Economics",chapter:"Development Experience of India",items:["No numeric formula — this chapter compares development strategies/policies (descriptive, not calculation-based)."]},
+ {subject:"Economics",chapter:"Indian Economic Development",items:["No numeric formula — descriptive coverage of sectoral reforms and development indicators."]},
+
+ // ---- GEOGRAPHY (the quantifiable parts of the syllabus) ----
+ {subject:"Geography",chapter:"Population",items:["Density = Population / Area","Sex Ratio = (Females / Males) × 1000","Growth Rate = [(P2 − P1) / P1] × 100"]},
+];
+
+/* ============ STATE ============ */
+let state={route:'home',params:{},
+  dark: localStorage.getItem('rbse_theme') ? localStorage.getItem('rbse_theme')==='dark' : matchMedia('(prefers-color-scheme:dark)').matches,
+  history:JSON.parse(localStorage.getItem('rbse_hist')||'[]'),
+  results:JSON.parse(localStorage.getItem('rbse_results')||'[]'),
+  bmQ:JSON.parse(localStorage.getItem('rbse_bm_q')||'[]'),
+  bmM:JSON.parse(localStorage.getItem('rbse_bm_m')||'[]'),
+  test:null, practice:null, lastRating:0};
+
+/* ---- Robust nav/back: track how many states WE pushed so goBack() never
+   calls history.back() past our own base state (which was the bug that made
+   the arrow/hardware-back feel like it "closed" the site). ---- */
+let navDepth=0;
+function nav(route,params={},fromPop){
+  state.route=route;state.params=params;
+  if(!fromPop){ navDepth++; history.pushState({route,params,depth:navDepth},'','#'+route); }
+  render(); window.scrollTo(0,0);
+}
+function goBack(){
+  if(navDepth>0){ history.back(); } else { nav('home',{},true); }
+}
+window.addEventListener('popstate',e=>{
+  const s=e.state||{route:'home',params:{},depth:0};
+  navDepth=s.depth||0;
+  nav(s.route,s.params,true);
+});
+history.replaceState({route:'home',params:{},depth:0},'','#home');
+
+/* In-app modal used instead of native alert/confirm/prompt — those browser dialogs
+   can be silently blocked inside a sandboxed preview iframe, which was making
+   Notes/PDFs/confirmations look like they "did nothing" when tapped. */
+function showInfo(title,bodyHtml,actionsHtml){
+  document.getElementById('infoModalBody').innerHTML =
+    `<div class="font-head font-bold text-lg mb-2">${title}</div>
+     <div class="text-sm" style="white-space:pre-line;max-height:55vh;overflow:auto">${bodyHtml}</div>
+     ${actionsHtml || `<button class="btn card w-full mt-3" onclick="closeInfoModal()">Close</button>`}`;
+  document.getElementById('infoModal').classList.remove('hidden');
+}
+function closeInfoModal(){ document.getElementById('infoModal').classList.add('hidden'); }
+
+function toggleTheme(){
+  state.dark=!state.dark;
+  localStorage.setItem('rbse_theme',state.dark?'dark':'light');
+  document.documentElement.setAttribute('data-theme',state.dark?'dark':'light');
+  render();
+}
+function setAppearance(mode){
+  if(mode==='system'){ localStorage.removeItem('rbse_theme'); state.dark=matchMedia('(prefers-color-scheme:dark)').matches; }
+  else { localStorage.setItem('rbse_theme',mode); state.dark=(mode==='dark'); }
+  document.documentElement.setAttribute('data-theme',state.dark?'dark':'light');
+  render();
+}
+
+/* ============ PROGRESS (real, based on actual attempts — not random) ============ */
+function getProgress(sub,ch){
+  const p=JSON.parse(localStorage.getItem('rbse_progress')||'{}');
+  const k=sub+'|'+ch;
+  return p[k]?p[k].pct:0;
+}
+function updateProgress(sub,ch,pct){
+  if(ch==='All')return;
+  const p=JSON.parse(localStorage.getItem('rbse_progress')||'{}');
+  const k=sub+'|'+ch;
+  const cur=p[k]||{pct:0,attempts:0};
+  cur.pct=Math.max(cur.pct,pct); cur.attempts++;
+  p[k]=cur; localStorage.setItem('rbse_progress',JSON.stringify(p));
+}
+
+/* ============ AI TEST GENERATOR (client-side simulation) ============ */
+/* ============ PARAMETERIZED QUESTION TEMPLATES ============
+   A hand-written seed bank tops out at a few dozen questions per subject.
+   For numeric subjects, each template below randomizes its numbers on every
+   call and recomputes the correct answer + explanation from scratch — so one
+   template can produce hundreds/thousands of genuinely different instances,
+   not a fixed list being reshuffled. This is how real numeric-MCQ generators
+   work without needing a live AI call. It only works for calculation-based
+   subjects; fact/literature subjects (Hindi, History, etc.) still rely on the
+   hand-written bank — see the note at the end of this reply.
+*/
+function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+function makeMCQ(base,optionValues,correctIndex){
+  const idx=[...optionValues.keys()].sort(()=>Math.random()-0.5);
+  return {...base,id:'t_'+base.topic.replace(/\s+/g,'')+'_'+Math.random().toString(36).slice(2,8),
+    options:idx.map(i=>String(optionValues[i])), correctAnswer:idx.indexOf(correctIndex)};
+}
+const QTEMPLATES=[
+ {subject:"Physics",chapter:"Electric Charges and Fields",topic:"Coulomb's Law",gen(){
+   const q1=randInt(1,9),q2=randInt(1,9),r=randInt(1,5);
+   const F=Math.round(90*q1*q2/(r*r)*100)/100;
+   return makeMCQ({subject:"Physics",chapter:"Electric Charges and Fields",topic:"Coulomb's Law",difficulty:"Medium",type:"Numerical",
+     question:`Two point charges of ${q1} μC and ${q2} μC are placed ${r} cm apart. Using F = kq₁q₂/r² (k = 9×10⁹ Nm²/C²), find the force between them.`,
+     explanation:`F = kq₁q₂/r² = 9×10⁹ × ${q1}×10⁻⁶ × ${q2}×10⁻⁶ / (${r}×10⁻²)² ≈ ${F} N.`},
+     [F+' N',(F*2).toFixed(2)+' N',(F/2).toFixed(2)+' N',(F+10).toFixed(2)+' N'],0);
+ }},
+ {subject:"Physics",chapter:"Current Electricity",topic:"Ohm's Law",gen(){
+   const R=randInt(2,50),I=randInt(1,10),V=R*I;
+   return makeMCQ({subject:"Physics",chapter:"Current Electricity",topic:"Ohm's Law",difficulty:"Easy",type:"Numerical",
+     question:`A resistor of ${R} Ω carries a current of ${I} A. Find the potential difference across it using V = IR.`,
+     explanation:`V = IR = ${I} × ${R} = ${V} V.`},
+     [V+' V',(V+R)+' V',(V-I)+' V',(V*2)+' V'],0);
+ }},
+ {subject:"Chemistry",chapter:"Solutions",topic:"Mole Concept",gen(){
+   const opts=[["H₂O",18],["CO₂",44],["NaCl",58.5],["H₂SO₄",98]];
+   const [name,M]=opts[randInt(0,3)]; const mass=randInt(5,50);
+   const moles=(mass/M).toFixed(2);
+   return makeMCQ({subject:"Chemistry",chapter:"Solutions",topic:"Mole Concept",difficulty:"Easy",type:"Numerical",
+     question:`Calculate the number of moles in ${mass} g of ${name} (molar mass = ${M} g/mol).`,
+     explanation:`Moles = given mass / molar mass = ${mass}/${M} = ${moles} mol.`},
+     [moles+' mol',(moles*2).toFixed(2)+' mol',(moles/2).toFixed(2)+' mol',(Number(moles)+1).toFixed(2)+' mol'],0);
+ }},
+ {subject:"Chemistry",chapter:"Solutions",topic:"Molarity",gen(){
+   const moles=(randInt(1,10)/10).toFixed(1), volume=(randInt(1,5)*0.5).toFixed(1);
+   const M=(moles/volume).toFixed(2);
+   return makeMCQ({subject:"Chemistry",chapter:"Solutions",topic:"Molarity",difficulty:"Medium",type:"Numerical",
+     question:`${moles} mol of solute is dissolved in ${volume} L of solution. Find the molarity.`,
+     explanation:`Molarity = moles / volume(L) = ${moles}/${volume} = ${M} mol/L.`},
+     [M+' mol/L',(M*2).toFixed(2)+' mol/L',(M/2).toFixed(2)+' mol/L',(Number(M)+0.5).toFixed(2)+' mol/L'],0);
+ }},
+ {subject:"Mathematics",chapter:"Application of Derivatives",topic:"Differentiation",gen(){
+   const a=randInt(2,9),n=randInt(2,5),k=a*n;
+   return makeMCQ({subject:"Mathematics",chapter:"Application of Derivatives",topic:"Differentiation",difficulty:"Medium",type:"Numerical",
+     question:`Find dy/dx if y = ${a}x^${n}.`,
+     explanation:`Using d/dx(xⁿ)=nxⁿ⁻¹: dy/dx = ${a}×${n}x^${n-1} = ${k}x^${n-1}.`},
+     [`${k}x^${n-1}`,`${a}x^${n-1}`,`${k}x^${n}`,`${a}x^${n}`],0);
+ }},
+ {subject:"Mathematics",chapter:"Integrals",topic:"Basic Integration",gen(){
+   const n=randInt(1,5), k=randInt(1,5), a=k*(n+1);
+   return makeMCQ({subject:"Mathematics",chapter:"Integrals",topic:"Basic Integration",difficulty:"Medium",type:"Numerical",
+     question:`Evaluate ∫${a}xⁿ dx where n = ${n}.`,
+     explanation:`∫${a}xⁿ dx = ${a}/(${n}+1) × x^(${n}+1) + C = ${k}x^${n+1} + C.`},
+     [`${k}x^${n+1} + C`,`${a}x^${n+1} + C`,`${k}x^${n} + C`,`${a}x^${n} + C`],0);
+ }},
+ {subject:"Accountancy",chapter:"Partnership Fundamentals",topic:"Interest on Capital",gen(){
+   const capital=randInt(10,100)*1000, rate=randInt(5,15), months=[6,12][randInt(0,1)];
+   const interest=Math.round(capital*rate*months/(100*12));
+   return makeMCQ({subject:"Accountancy",chapter:"Partnership Fundamentals",topic:"Interest on Capital",difficulty:"Medium",type:"Numerical",
+     question:`A partner's capital is ₹${capital}. Interest on capital is charged at ${rate}% p.a. Calculate interest on capital for ${months} months.`,
+     explanation:`Interest on Capital = Capital × Rate × Time/100 = ${capital} × ${rate}% × ${months}/12 = ₹${interest}.`},
+     ['₹'+interest,'₹'+Math.round(interest*2),'₹'+Math.round(interest/2),'₹'+(interest+500)],0);
+ }},
+ {subject:"Economics",chapter:"National Income Accounting",topic:"GDP Calculation",gen(){
+   const gdpfc=randInt(100,500)*10, nit=randInt(5,50)*10, gdpmp=gdpfc+nit;
+   return makeMCQ({subject:"Economics",chapter:"National Income Accounting",topic:"GDP Calculation",difficulty:"Medium",type:"Numerical",
+     question:`GDP at Factor Cost is ₹${gdpfc} crore and Net Indirect Taxes are ₹${nit} crore. Find GDP at Market Price.`,
+     explanation:`GDP at MP = GDP at FC + Net Indirect Taxes = ${gdpfc} + ${nit} = ₹${gdpmp} crore.`},
+     ['₹'+gdpmp+' crore','₹'+(gdpfc-nit)+' crore','₹'+gdpfc+' crore','₹'+(gdpmp+nit)+' crore'],0);
+ }},
+ {subject:"English",chapter:"Grammar",topic:"Subject-Verb Agreement",gen(){
+   const subs=[["He",true],["She",true],["They",false],["We",false],["I",false]];
+   const verbs=["play","read","sing","walk","talk"];
+   const [subj,addS]=subs[randInt(0,4)], verb=verbs[randInt(0,4)];
+   const correctForm=addS?verb+'s':verb, wrongForm=addS?verb:verb+'s';
+   return makeMCQ({subject:"English",chapter:"Grammar",topic:"Subject-Verb Agreement",difficulty:"Easy",type:"MCQ",
+     question:`Choose the grammatically correct sentence using the subject '${subj}' and the verb '${verb}':`,
+     explanation:`With the subject '${subj}', the verb must ${addS?"take an 's' (third-person singular)":"NOT take an 's'"} — so '${subj} ${correctForm} daily.' is correct.`},
+     [`${subj} ${correctForm} daily.`,`${subj} ${wrongForm} daily.`,`${subj} ${verb}ing daily.`,`${subj} ${verb} to daily.`],0);
+ }},
+];
+function fromTemplates(subject,chapter,minCount){
+  const applicable=QTEMPLATES.filter(t=>t.subject===subject && (chapter==='All'||t.chapter===chapter));
+  let out=[];
+  applicable.forEach(t=>{ for(let i=0;i<Math.max(8,minCount);i++) out.push(t.gen()); });
+  return out;
+}
+
+function generateTest({subject,chapter,count,difficulty,type}){
+  let pool = subject==='All' ? QBANK.slice() : QBANK.filter(q=>q.subject===subject && (chapter==='All'||q.chapter===chapter));
+  let widened=false;
+  // If a specific CHAPTER doesn't have enough unique questions, widen to the
+  // whole SUBJECT (still the same subject — e.g. more Hindi chapters, never Physics).
+  // We must never cross into a different subject here, or a Hindi/English test
+  // would start showing Physics/Chemistry questions, which is exactly the bug this fixes.
+  if(pool.length < Math.min(count,4) && subject!=='All' && chapter!=='All'){
+    pool = QBANK.filter(q=>q.subject===subject); widened=true;
+  }
+  // Mix in freshly-generated template instances (randomized numbers each call —
+  // genuinely different questions, not a fixed list) for subjects that have them.
+  if(subject==='All'){
+    QTEMPLATES.forEach(t=>{ for(let i=0;i<4;i++) pool.push(t.gen()); });
+  } else {
+    pool = pool.concat(fromTemplates(subject,chapter,count));
+  }
+  if(difficulty && difficulty!=='Mixed') pool=pool.filter(q=>q.difficulty===difficulty).concat(pool.filter(q=>q.difficulty!==difficulty));
+  if(type && type!=='Mixed') pool=pool.filter(q=>q.type===type).concat(pool.filter(q=>q.type!==type));
+  const seen=new Set(state.history);
+  pool=[...pool].sort((a,b)=>(seen.has(a.id)?1:0)-(seen.has(b.id)?1:0));
+  if(pool.length===0) return [];
+  // shuffle first so any necessary repeats are spread out, not back-to-back
+  const shuffled=[...pool].sort(()=>Math.random()-0.5);
+  let picked=[];
+  for(let i=0;i<count;i++) picked.push(shuffled[i%shuffled.length]);
+  picked=picked.map(q=>{
+    const idx=[...Array(q.options.length).keys()].sort(()=>Math.random()-0.5);
+    return {...q,options:idx.map(i=>q.options[i]),correctAnswer:idx.indexOf(q.correctAnswer)};
+  });
+  picked.sort(()=>Math.random()-0.5);
+  picked._uniquePool=pool.length; picked._widened=widened;
+  return picked;
+}
+
+/* ============ FLOATING WIDGETS ============ */
+function toggleCalc(){document.getElementById('calcPanel').classList.toggle('hidden');buildCalc();}
+function buildCalc(){
+  const p=document.getElementById('calcPanel');
+  if(p.dataset.built)return; p.dataset.built='1';
+  const keys=['7','8','9','/','4','5','6','*','1','2','3','-','C','0','.','=','+'];
+  const grid=document.createElement('div'); grid.className='grid grid-cols-4 gap-1';
+  keys.forEach(k=>{const b=document.createElement('button');b.textContent=k;b.className='btn card';b.onclick=()=>calcPress(k);grid.appendChild(b);});
+  p.appendChild(grid);
+  let dragging=false,ox=0,oy=0;
+  const handle=document.getElementById('calcHandle');
+  handle.addEventListener('pointerdown',e=>{dragging=true;ox=e.clientX-p.offsetLeft;oy=e.clientY-p.offsetTop;});
+  window.addEventListener('pointermove',e=>{if(dragging){p.style.left=(e.clientX-ox)+'px';p.style.top=(e.clientY-oy)+'px';p.style.bottom='auto';}});
+  window.addEventListener('pointerup',()=>dragging=false);
+}
+let calcExpr='';
+function calcPress(k){
+  const d=document.getElementById('calcDisplay');
+  if(k==='C'){calcExpr='';} else if(k==='='){try{calcExpr=String(Function('"use strict";return('+calcExpr+')')());}catch(e){calcExpr='Error';}}
+  else calcExpr+=k;
+  d.value=calcExpr||'0';
+}
+function toggleDoubt(){document.getElementById('doubtPanel').classList.toggle('hidden');}
+function askDoubt(){
+  const raw=document.getElementById('doubtInput').value.trim();
+  const q=raw.toLowerCase();
+  const box=document.getElementById('doubtAnswer');
+  if(!q){box.textContent='Type a question first.';return;}
+  const words=q.split(/\s+/).filter(w=>w.length>3);
+  let best=null,bestScore=0;
+  QBANK.forEach(item=>{
+    const text=(item.topic+' '+item.chapter+' '+item.question).toLowerCase();
+    const score=words.filter(w=>text.includes(w)).length;
+    if(score>bestScore){bestScore=score;best=item;}
+  });
+  if(best&&bestScore>0){
+    box.innerHTML=`<b>${best.topic} (${best.subject} — ${best.chapter}):</b><br>${best.explanation}`;
+  } else {
+    box.innerHTML=`That's a fair question — it may sit outside our seeded RBSE Class 12 bank, in or out of the syllabus, but here's the honest picture: this demo can only match against the sample questions it has, so I can't give you a reliable answer to that specific one yet. Try naming a subject, chapter or topic and I'll do my best with what's here. (A live version would call a real AI model that can answer any question — in or out of syllabus — and would clearly label anything outside the RBSE Class 12 syllabus so you don't confuse it with exam content.)`;
+  }
+}
+function openHelp(){
+  const w=window.open('mailto:'+EMAIL+'?subject=RBSE%20Test%20Arena%20-%20Help','_blank');
+  navigator.clipboard && navigator.clipboard.writeText(EMAIL).catch(()=>{});
+  setTimeout(()=>{ if(!w || w.closed!==false){ showInfo('Need help?','If your email app did not open, please write to us directly:\n\n'+EMAIL+'\n\n(copied to your clipboard)'); } },400);
+}
+function toggleFeedback(){
+  document.getElementById('feedbackModal').classList.toggle('hidden');
+  document.getElementById('fbStatus').textContent='';
+}
+function sendFeedback(rating){
+  const t=document.getElementById('fbText').value.trim();
+  const stars=rating||state.lastRating||0;
+  if(!t && !stars){showInfo('Feedback','Please write your feedback or pick a star rating first.');return;}
+  const body=(stars?('Rating: '+stars+'/7 stars\n\n'):'')+t;
+  window.open('mailto:'+EMAIL+'?subject=RBSE%20Test%20Arena%20Feedback&body='+encodeURIComponent(body),'_blank');
+  navigator.clipboard && navigator.clipboard.writeText(body+'\n\nSend to: '+EMAIL).catch(()=>{});
+  const s=document.getElementById('fbStatus');
+  if(s) s.textContent='Thanks! Your email app should have opened — if not, your feedback was copied, please paste it to '+EMAIL;
+}
+
+/* ============ BOOKMARKS ============ */
+function toggleBmQ(id){ const i=state.bmQ.indexOf(id); if(i>-1) state.bmQ.splice(i,1); else state.bmQ.push(id); localStorage.setItem('rbse_bm_q',JSON.stringify(state.bmQ)); render(); }
+function toggleBmM(id){ const i=state.bmM.indexOf(id); if(i>-1) state.bmM.splice(i,1); else state.bmM.push(id); localStorage.setItem('rbse_bm_m',JSON.stringify(state.bmM)); render(); }
+
+/* ============ LOGIN / PROFILE ============ */
+function signInGoogle(){
+  showInfo('Continue with Google (Demo)',
+    `<input id="gName" placeholder="Your name" class="mb-2">
+     <div class="text-xs" style="color:var(--muted)">No real Google account is contacted in this prototype — a production build uses real Google OAuth via Supabase.</div>`,
+    `<button class="btn grad text-white w-full mt-3" onclick="completeGoogleSignIn()">Continue</button>
+     <button class="btn card w-full mt-2" onclick="closeInfoModal()">Cancel</button>`);
+}
+function completeGoogleSignIn(){
+  const name=document.getElementById('gName').value.trim();
+  if(!name)return;
+  localStorage.setItem('rbse_user',JSON.stringify({name,email:name.toLowerCase().replace(/\s+/g,'')+'@gmail.com',method:'Google'}));
+  closeInfoModal(); nav('profile',{},true);
+}
+function signInGuest(){ localStorage.setItem('rbse_user',JSON.stringify({name:'Guest',method:'Guest'})); render(); }
+function signOut(){ localStorage.removeItem('rbse_user'); render(); }
+function appearanceBlock(){
+  const mode=localStorage.getItem('rbse_theme')||'system';
+  return `<div class="card p-5 max-w-sm mx-auto fade mb-4">
+    <div class="font-semibold mb-2">🎨 Appearance</div>
+    <div class="flex gap-2">
+      <button class="chip ${mode==='light'?'active':''}" onclick="setAppearance('light')">☀️ Light</button>
+      <button class="chip ${mode==='dark'?'active':''}" onclick="setAppearance('dark')">🌙 Dark</button>
+      <button class="chip ${mode==='system'?'active':''}" onclick="setAppearance('system')">🖥️ System</button>
+    </div>
+  </div>`;
+}
+function viewProfile(){
+  const u=JSON.parse(localStorage.getItem('rbse_user')||'null');
+  if(!u) return `${Header('Sign In','goBack()')}
+    ${appearanceBlock()}
+    <div class="card p-6 max-w-sm mx-auto text-center fade">
+      <div class="text-3xl mb-2">👤</div>
+      <p class="mb-4" style="color:var(--muted)">Sign in to save your scores, progress and bookmarks.</p>
+      <button class="btn w-full mb-2" style="background:#fff;color:#3c4043;border:1px solid var(--border)" onclick="signInGoogle()">
+        <span style="color:#4285F4">G</span><span style="color:#EA4335">o</span><span style="color:#FBBC05">o</span><span style="color:#4285F4">g</span><span style="color:#34A853">l</span><span style="color:#EA4335">e</span> — Continue with Google
+      </button>
+      <button class="btn card w-full" onclick="signInGuest()">Continue as Guest</button>
+      <div class="text-xs mt-3" style="color:var(--muted)">Demo sign-in — a production build uses real Supabase/Google OAuth.</div>
+    </div>`;
+  return `${Header('My Profile','goBack()')}
+    ${appearanceBlock()}
+    <div class="card p-6 max-w-sm mx-auto text-center fade">
+      <div class="text-3xl mb-2">${u.method==='Google'?'🟢':'👤'}</div>
+      <div class="font-semibold">${u.name}</div>
+      <div class="text-xs" style="color:var(--muted)">${u.email||''} · Signed in via ${u.method}</div>
+      <button class="btn card w-full mt-4" onclick="nav('dashboard')">View Dashboard</button>
+      <button class="btn card w-full mt-2" onclick="signOut()">Sign Out</button>
+    </div>`;
+}
+
+/* ============ VIEWS ============ */
+function Header(title,back){
+  return `<div class="flex items-center gap-3 py-4">
+    ${back?`<button onclick="${back}" class="btn card px-3 py-2">←</button>`:''}
+    <h1 class="font-head text-xl font-bold flex-1">${title}</h1>
+    <button onclick="toggleTheme()" class="btn card px-3 py-2">${state.dark?'☀️':'🌙'}</button>
+  </div>`;
+}
+
+function viewHome(){
+  return `<div class="fade">
+    <div class="grad rounded-3xl p-8 text-white mt-12 shadow-lg">
+      <div class="text-xs opacity-80 font-semibold">${SESSION_LABEL}</div>
+      <h1 class="font-head text-3xl md:text-4xl font-extrabold mt-1">RBSE 12th Test Arena</h1>
+      <p class="mt-2 opacity-90">Practice smarter. Test yourself. Prepare for RBSE Board Exams.</p>
+      <div class="flex gap-3 mt-5 flex-wrap">
+        <button onclick="nav('subjects')" class="btn bg-white text-teal-700">Start Test</button>
+        <button onclick="nav('subjects')" class="btn border border-white/60">Explore Subjects</button>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+      ${[['🤖','AI Generated Questions','Try the generator now',"nav('setup',{subject:'Physics',chapter:'All'})"],
+         ['♾️','Unlimited Practice','Endless one-by-one questions',"nav('practice')"],
+         ['🎯','RBSE Syllabus Focused','Browse full syllabus',"nav('subjects')"]].map(([icon,t,sub,fn])=>`
+        <div class="card p-4 text-center font-semibold hover:shadow-lg hover:-translate-y-0.5 transition cursor-pointer" onclick="${fn}">
+          <div class="text-2xl mb-1">${icon}</div><div>${t}</div>
+          <div class="text-xs font-normal mt-1" style="color:var(--muted)">${sub}</div>
+        </div>`).join('')}
+    </div>
+    <h2 class="font-head text-xl font-bold mt-8 mb-3">Choose Your Stream</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      ${Object.entries(STREAMS).map(([name,s])=>`
+        <div class="card p-5 hover:shadow-lg transition">
+          <div class="text-3xl">${s.icon}</div>
+          <div class="font-head font-bold text-lg mt-2">${name}</div>
+          <div class="text-sm mt-1" style="color:var(--muted)">${s.subjects.length} subjects</div>
+          <button onclick="nav('stream',{stream:'${name}'})" class="btn grad text-white mt-3 w-full">Subjects</button>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function viewSubjects(){
+  return `${Header('All Subjects','goBack()')}
+  <button class="btn grad text-white w-full mb-5" onclick="nav('setup',{subject:'All',chapter:'All'})">🧪 Test All Subjects (Mixed)</button>
+  ${Object.entries(STREAMS).map(([name,s])=>`
+    <div class="mb-6 fade"><div class="font-head font-bold text-lg mb-2">${s.icon} ${name}</div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        ${s.subjects.map(sub=>`<div class="card p-4 text-center hover:shadow-lg transition cursor-pointer" onclick="nav('subject',{subject:'${sub}'})">
+          <div class="font-semibold">${sub}</div><div class="text-xs mt-1" style="color:var(--muted)">${(CHAPTERS[sub]||[]).length} chapters</div></div>`).join('')}
+      </div></div>`).join('')}`;
+}
+
+function viewStream(){
+  const s=STREAMS[state.params.stream];
+  return `${Header(state.params.stream+' Stream','goBack()')}
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 fade">
+    ${s.subjects.map(sub=>`<div class="card p-4 text-center hover:shadow-lg transition cursor-pointer" onclick="nav('subject',{subject:'${sub}'})">
+      <div class="font-semibold">${sub}</div><div class="text-xs mt-1" style="color:var(--muted)">${(CHAPTERS[sub]||[]).length} chapters</div></div>`).join('')}
+  </div>`;
+}
+
+function openSubjectImportantPdf(sub){
+  const list=QBANK.filter(q=>q.subject===sub);
+  const txt=list.length? list.map((q,i)=>(i+1)+'. '+q.question).join('\n') : 'More important questions for '+sub+' are being prepared.';
+  showInfo(sub+' — Important Questions PDF', txt+'\n\n(Demo preview — production opens the real PDF from Supabase Storage.)');
+}
+
+function viewSubject(){
+  const sub=state.params.subject, tab=state.params.tab||'chapters';
+  const chapters=CHAPTERS[sub]||[];
+  const setTab=t=>`nav('subject',{subject:'${sub}',tab:'${t}'})`;
+  let body='';
+  if(tab==='important'){
+    const list=QBANK.filter(q=>q.subject===sub);
+    body=list.length?`<div class="grid gap-3">${list.map(q=>`<div class="card p-4">
+        <div class="text-xs mb-1" style="color:var(--yellow)">${IMPORTANT_TAGS[Math.floor(Math.random()*IMPORTANT_TAGS.length)]}</div>
+        <div class="font-semibold flex justify-between gap-2"><span>${q.question}</span><button onclick="toggleBmQ('${q.id}')">${state.bmQ.includes(q.id)?'🔖':'📑'}</button></div>
+        <div class="text-xs mt-1" style="color:var(--muted)">${q.chapter}</div></div>`).join('')}</div>`
+      :`<div class="card p-8 text-center" style="color:var(--muted)">Important questions are being prepared for ${sub}.</div>`;
+  } else if(tab==='previous'){
+    const list=state.results.filter(r=>r.subject===sub);
+    body=list.length?`<div class="grid gap-2">${list.map(r=>`<div class="card p-3 flex justify-between"><div>${r.chapter} · ${new Date(r.date).toLocaleDateString()}</div><b style="color:${r.pct>=50?'var(--green)':'var(--red)'}">${r.pct}%</b></div>`).join('')}</div>`
+      :`<div class="card p-8 text-center" style="color:var(--muted)">No previous attempts for ${sub} yet — take a test to see it here.</div>`;
+  } else {
+    if(!chapters.length){ body=`<div class="card p-8 text-center" style="color:var(--muted)">Chapters are being prepared for ${sub}.</div>`; }
+    else body=`<div class="grid gap-3">${chapters.map(c=>{
+      const n=QBANK.filter(q=>q.subject===sub&&q.chapter===c).length;
+      const prog=getProgress(sub,c);
+      return `<div class="card p-4 flex items-center justify-between gap-3">
+        <div class="flex-1"><div class="font-semibold">${c}</div>
+          <div class="text-xs mt-1" style="color:var(--muted)">Seed questions: ${n} · Your Progress: ${prog}%</div>
+          <div class="w-full h-2 rounded-full mt-2" style="background:var(--border)"><div class="h-2 rounded-full grad" style="width:${prog}%"></div></div>
+        </div>
+        <button class="btn grad text-white shrink-0" onclick="nav('setup',{subject:'${sub}',chapter:'${c}'})">Practice</button>
+      </div>`}).join('')}</div>`;
+  }
+  return `${Header(sub,'goBack()')}
+  <div class="grid grid-cols-2 gap-2 mb-4 fade">
+    <button class="btn card" onclick="openSubjectImportantPdf('${sub}')">📄 Important Questions PDF</button>
+    <button class="btn card" onclick="nav('setup',{subject:'${sub}',chapter:'All'})">🎲 Random AI Test</button>
+  </div>
+  <div class="flex gap-2 mb-4 flex-wrap">
+    <span class="chip ${tab==='chapters'?'active':''}" onclick="${setTab('chapters')}">Chapter-wise</span>
+    <span class="chip ${tab==='important'?'active':''}" onclick="${setTab('important')}">Important Qs</span>
+    <span class="chip ${tab==='previous'?'active':''}" onclick="${setTab('previous')}">Previous Practice</span>
+  </div>
+  <div class="fade">${body}</div>`;
+}
+
+function viewSetup(){
+  const {subject,chapter}=state.params;
+  return `${Header('Test Settings','goBack()')}
+  <div class="card p-6 max-w-md mx-auto fade">
+    <div class="space-y-1 text-sm mb-4"><div><b>Subject:</b> ${subject==='All'?'All Subjects':subject}</div><div><b>Chapter:</b> ${chapter}</div></div>
+    <label class="text-sm font-semibold">Questions</label>
+    <div class="flex gap-2 my-2" id="countChips">${[10,20,30,50].map((n,i)=>`<button class="chip ${i===1?'active':''}" onclick="pick('countChips',this,'count',${n})">${n}</button>`).join('')}</div>
+    <label class="text-sm font-semibold">Difficulty</label>
+    <div class="flex gap-2 my-2 flex-wrap" id="diffChips">${['Easy','Medium','Hard','Mixed'].map((d,i)=>`<button class="chip ${i===3?'active':''}" onclick="pick('diffChips',this,'difficulty','${d}')">${d}</button>`).join('')}</div>
+    <label class="text-sm font-semibold">Question Type</label>
+    <div class="flex gap-2 my-2 flex-wrap" id="typeChips">${['MCQ','True/False','Assertion & Reason','Numerical','Conceptual','Mixed'].map((t,i)=>`<button class="chip ${i===5?'active':''}" onclick="pick('typeChips',this,'type','${t}')">${t}</button>`).join('')}</div>
+    <div class="text-xs mt-3" style="color:var(--muted)">Time: <span id="timeShow">20</span> minutes (1 min/question)</div>
+    <button class="btn grad text-white w-full mt-5" onclick="startTest('${subject}','${chapter}')">GENERATE TEST</button>
+  </div>`;
+}
+let setupSel={count:20,difficulty:'Mixed',type:'Mixed'};
+function pick(groupId,el,key,val){
+  document.querySelectorAll('#'+groupId+' .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active'); setupSel[key]=val;
+  if(key==='count') document.getElementById('timeShow').textContent=val;
+}
+let pendingTest=null;
+function startTest(subject,chapter,isDaily){
+  const qs=generateTest({subject,chapter,count:setupSel.count,difficulty:setupSel.difficulty,type:setupSel.type});
+  if(qs.length===0){showInfo('No questions yet','Questions are being prepared for this selection. Try Physics, Chemistry, Mathematics, Accountancy or History, or pick "All Subjects".');return;}
+  if(qs._uniquePool < qs.length){
+    pendingTest={qs,subject,chapter,isDaily};
+    showInfo('Limited question bank right now',
+      'Only '+qs._uniquePool+' unique question(s) are available for this selection, so some will repeat in this test. We\'re actively expanding the bank — Physics, Chemistry, Mathematics, Accountancy and History currently have the most variety.',
+      `<button class="btn grad text-white w-full mt-3" onclick="closeInfoModal();launchPendingTest()">Continue Anyway</button>
+       <button class="btn card w-full mt-2" onclick="closeInfoModal()">Change Settings</button>`);
+    return;
+  }
+  launchTest(qs,subject,chapter,isDaily);
+}
+function launchPendingTest(){ if(pendingTest){ launchTest(pendingTest.qs,pendingTest.subject,pendingTest.chapter,pendingTest.isDaily); pendingTest=null; } }
+function launchTest(qs,subject,chapter,isDaily){
+  state.test={subject,chapter,isDaily:!!isDaily,questions:qs,answers:Array(qs.length).fill(null),cur:0,total:qs.length*60,remaining:qs.length*60,start:Date.now()};
+  nav('test'); startTimer();
+}
+let timerInt=null;
+function startTimer(){
+  clearInterval(timerInt);
+  timerInt=setInterval(()=>{
+    if(!state.test||state.route!=='test'){clearInterval(timerInt);return;}
+    state.test.remaining--;
+    const t=document.getElementById('timerShow');
+    if(t) t.textContent=fmtTime(state.test.remaining);
+    if(state.test.remaining<=0){clearInterval(timerInt);submitTest();}
+  },1000);
+}
+function fmtTime(s){s=Math.max(0,s);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+
+function viewTest(){
+  const t=state.test; const q=t.questions[t.cur];
+  return `<div class="fade">
+  <div class="flex justify-between items-center py-4">
+    <div class="font-head font-bold">${t.subject==='All'?'All Subjects':t.subject} · ${t.chapter}</div>
+    <div class="card px-3 py-1 font-mono font-bold" id="timerShow">${fmtTime(t.remaining)}</div>
+  </div>
+  <div class="card p-5">
+    <div class="text-xs mb-2 flex justify-between" style="color:var(--muted)">
+      <span>Question ${t.cur+1} of ${t.questions.length} · ${q.difficulty} · ${q.type}${t.subject==='All'?' · '+q.subject:''}</span>
+      <button onclick="toggleBmQ('${q.id}')">${state.bmQ.includes(q.id)?'🔖':'📑'}</button>
+    </div>
+    <div class="font-semibold text-lg mb-4" style="white-space:pre-line">${q.question}</div>
+    <div class="grid gap-2">
+      ${q.options.map((o,i)=>`<button onclick="answer(${i})" class="btn text-left border" style="border-color:${t.answers[t.cur]===i?'var(--p1)':'var(--border)'};background:${t.answers[t.cur]===i?'rgba(99,102,241,.1)':'var(--card)'}">${String.fromCharCode(65+i)}. ${o}</button>`).join('')}
+    </div>
+    <div class="flex justify-between mt-5">
+      <button class="btn card" onclick="stepQ(-1)" ${t.cur===0?'disabled':''}>Previous</button>
+      ${t.cur<t.questions.length-1?`<button class="btn grad text-white" onclick="stepQ(1)">Next</button>`:`<button class="btn text-white" style="background:var(--green)" onclick="confirmSubmit()">Finish Test</button>`}
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-2 mt-4">
+    ${t.questions.map((_,i)=>`<button onclick="goQ(${i})" class="w-9 h-9 rounded-lg font-semibold text-sm" style="background:${i===t.cur?'var(--p1)':t.answers[i]!==null?'var(--green)':'var(--border)'};color:${i===t.cur||t.answers[i]!==null?'#fff':'var(--text)'}">${i+1}</button>`).join('')}
+  </div>
+  </div>`;
+}
+function answer(i){state.test.answers[state.test.cur]=i;render();}
+function stepQ(d){state.test.cur+=d;render();}
+function goQ(i){state.test.cur=i;render();}
+function confirmSubmit(){
+  showInfo('Submit Test?','Are you sure you want to submit? You won\'t be able to change your answers after this.',
+    `<div class="flex gap-2 mt-3">
+       <button class="btn card flex-1" onclick="closeInfoModal()">Cancel</button>
+       <button class="btn text-white flex-1" style="background:var(--green)" onclick="closeInfoModal();submitTest()">Submit Test</button>
+     </div>`);
+}
+function submitTest(){
+  clearInterval(timerInt);
+  const t=state.test;
+  let correct=0,wrong=0,skipped=0;
+  t.questions.forEach((q,i)=>{
+    state.history.push(q.id);
+    if(t.answers[i]===null) skipped++; else if(t.answers[i]===q.correctAnswer) correct++; else wrong++;
+  });
+  localStorage.setItem('rbse_hist',JSON.stringify(state.history.slice(-500)));
+  const timeTaken=t.total-t.remaining;
+  const pct=Math.round(correct/t.questions.length*100);
+  const result={subject:t.subject,chapter:t.chapter,correct,wrong,skipped,total:t.questions.length,pct,timeTaken,questions:t.questions,answers:t.answers,date:Date.now()};
+  state.results.unshift(result);
+  localStorage.setItem('rbse_results',JSON.stringify(state.results.slice(0,20)));
+  state.lastResult=result; state.lastRating=0;
+  if(t.subject!=='All' && t.chapter!=='All') updateProgress(t.subject,t.chapter,pct);
+  if(t.isDaily){
+    const prev=JSON.parse(localStorage.getItem('rbse_daily')||'{"last":0,"streak":0}');
+    const diffH=(Date.now()-prev.last)/3600000;
+    const streak=diffH<48?prev.streak+1:1;
+    localStorage.setItem('rbse_daily',JSON.stringify({last:Date.now(),streak}));
+  }
+  nav('result');
+}
+
+function viewResult(){
+  const r=state.lastResult||state.results[0];
+  if(!r) return `${Header('Result')}<div class="card p-6 text-center">No result yet.</div>`;
+  const msg=r.pct>=80?'Excellent work! 🎉':r.pct>=50?'Good job — keep going! 👍':'Needs more practice — you can do it! 💪';
+  return `${Header('Your Result','goBack()')}
+  <div class="card p-6 text-center fade">
+    <div class="relative w-40 h-40 mx-auto" style="background:conic-gradient(var(--p1) ${r.pct*3.6}deg,var(--border) 0deg);border-radius:50%">
+      <div class="absolute inset-3 rounded-full flex items-center justify-center flex-col" style="background:var(--card)">
+        <div class="font-head text-3xl font-extrabold">${r.pct}%</div><div class="text-xs" style="color:var(--muted)">${r.correct}/${r.total}</div>
+      </div>
+    </div>
+    <div class="font-semibold mt-4">${msg}</div>
+    <div class="grid grid-cols-4 gap-2 mt-5 text-sm">
+      <div class="card p-3"><div class="font-bold" style="color:var(--green)">${r.correct}</div>Correct</div>
+      <div class="card p-3"><div class="font-bold" style="color:var(--red)">${r.wrong}</div>Wrong</div>
+      <div class="card p-3"><div class="font-bold" style="color:var(--yellow)">${r.skipped}</div>Skipped</div>
+      <div class="card p-3"><div class="font-bold">${fmtTime(r.timeTaken)}</div>Time</div>
+    </div>
+    <div class="flex gap-2 mt-5 flex-wrap justify-center">
+      <button class="btn grad text-white" onclick="nav('review')">Review Answers</button>
+      <button class="btn card" onclick="retryWrong()">Retry Wrong Questions</button>
+      <button class="btn card" onclick="shareProgress()">📤 Share</button>
+    </div>
+    <div class="mt-6 pt-5" style="border-top:1px solid var(--border)">
+      <div class="font-semibold mb-2">Rate this test</div>
+      <div id="starRow">${[1,2,3,4,5,6,7].map(n=>`<span class="star ${n<=state.lastRating?'on':''}" onclick="rateStar(${n})">★</span>`).join('')}</div>
+      <button class="btn card mt-3" onclick="toggleFeedback()">💬 Add written feedback</button>
+    </div>
+  </div>`;
+}
+function rateStar(n){
+  state.lastRating=n;
+  document.querySelectorAll('#starRow .star').forEach((el,i)=>el.classList.toggle('on',i<n));
+  const body='Rating: '+n+'/7 stars';
+  window.open('mailto:'+EMAIL+'?subject=RBSE%20Test%20Arena%20Feedback&body='+encodeURIComponent(body),'_blank');
+  navigator.clipboard && navigator.clipboard.writeText(body+'\n\nSend to: '+EMAIL).catch(()=>{});
+  showInfo('Thanks for rating! ⭐','You rated this test '+n+'/7. Your email app should have opened to send it to '+EMAIL+' — if not, it was copied to your clipboard.');
+}
+function shareProgress(){
+  const r=state.lastResult; if(!r)return;
+  const text=`I scored ${r.pct}% (${r.correct}/${r.total}) on ${r.subject==='All'?'a mixed-subject':r.subject} RBSE 12th test on Test Arena! 🎯`;
+  if(navigator.share){navigator.share({text}).catch(()=>{});} else {navigator.clipboard.writeText(text);showInfo('Copied!','Your result has been copied to your clipboard:\n\n'+text);}
+}
+function retryWrong(){
+  const r=state.lastResult;
+  const wrongQs=r.questions.filter((q,i)=>r.answers[i]!==q.correctAnswer);
+  if(!wrongQs.length){showInfo('Nice work!','No wrong questions to retry — great job!');return;}
+  state.test={subject:r.subject,chapter:r.chapter,questions:wrongQs,answers:Array(wrongQs.length).fill(null),cur:0,total:wrongQs.length*60,remaining:wrongQs.length*60,start:Date.now()};
+  nav('test'); startTimer();
+}
+
+function viewReview(){
+  const r=state.lastResult;
+  return `${Header('Question Review','goBack()')}
+  <div class="grid gap-3 fade">
+  ${r.questions.map((q,i)=>{
+    const ua=r.answers[i], correct=ua===q.correctAnswer;
+    return `<div class="card p-4">
+      <div class="flex justify-between items-center mb-2">
+        <div class="font-semibold">Q${i+1}</div>
+        <div class="flex items-center gap-2">
+          <button onclick="toggleBmQ('${q.id}')">${state.bmQ.includes(q.id)?'🔖':'📑'}</button>
+          <div class="text-xs font-bold px-2 py-1 rounded-full" style="background:${correct?'rgba(22,163,74,.15)':'rgba(220,38,38,.15)'};color:${correct?'var(--green)':'var(--red)'}">${correct?'Correct':ua===null?'Skipped':'Wrong'}</div>
+        </div>
+      </div>
+      <div class="mb-2" style="white-space:pre-line">${q.question}</div>
+      <div class="text-sm">Your answer: <b>${ua!==null?String.fromCharCode(65+ua)+'. '+q.options[ua]:'—'}</b></div>
+      <div class="text-sm">Correct answer: <b style="color:var(--green)">${String.fromCharCode(65+q.correctAnswer)}. ${q.options[q.correctAnswer]}</b></div>
+      ${!correct?`<div class="text-sm mt-2 p-3 rounded-xl" style="background:var(--bg)"><b>Why it was wrong / Concept to remember:</b><br>${q.explanation}</div>`:''}
+    </div>`}).join('')}
+  </div>`;
+}
+
+function viewPractice(){
+  return `${Header('Unlimited Practice','goBack()')}
+  <p class="mb-4" style="color:var(--muted)">Pick a subject to start an endless practice stream — one question at a time, no timer, no limit.</p>
+  ${Object.entries(STREAMS).map(([name,s])=>`
+    <div class="mb-5 fade"><div class="font-head font-bold mb-2">${s.icon} ${name}</div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">${s.subjects.map(sub=>`<div class="card p-4 text-center hover:shadow-lg transition cursor-pointer" onclick="startPracticeStream('${sub}')">${sub}</div>`).join('')}</div></div>`).join('')}`;
+}
+function startPracticeStream(subject){ state.practice={subject,correct:0,wrong:0,seen:0,q:null}; nextPracticeQ(); nav('practiceSession'); }
+function nextPracticeQ(){ const qs=generateTest({subject:state.practice.subject,chapter:'All',count:1,difficulty:'Mixed',type:'Mixed'}); state.practice.q=qs[0]||null; state.practice.answered=null; }
+function viewPracticeSession(){
+  const p=state.practice;
+  if(!p.q) return `${Header('Unlimited Practice','goBack()')}<div class="card p-8 text-center" style="color:var(--muted)">Questions are being prepared for ${p.subject}.</div>`;
+  const q=p.q;
+  return `${Header(p.subject+' · Unlimited','goBack()')}
+  <div class="flex gap-3 text-sm mb-3"><span class="chip">Seen: ${p.seen}</span><span class="chip" style="color:var(--green)">✓ ${p.correct}</span><span class="chip" style="color:var(--red)">✗ ${p.wrong}</span></div>
+  <div class="card p-5 fade">
+    <div class="font-semibold text-lg mb-4" style="white-space:pre-line">${q.question}</div>
+    <div class="grid gap-2">
+      ${q.options.map((o,i)=>{
+        let bg='var(--card)',bc='var(--border)';
+        if(p.answered!==null){ if(i===q.correctAnswer){bg='rgba(22,163,74,.15)';bc='var(--green)';} else if(i===p.answered){bg='rgba(220,38,38,.15)';bc='var(--red)';} }
+        return `<button onclick="answerPractice(${i})" class="btn text-left border" style="border-color:${bc};background:${bg}" ${p.answered!==null?'disabled':''}>${String.fromCharCode(65+i)}. ${o}</button>`;
+      }).join('')}
+    </div>
+    ${p.answered!==null?`<div class="text-sm mt-3 p-3 rounded-xl" style="background:var(--bg)"><b>Explanation:</b> ${q.explanation}</div>
+    <button class="btn grad text-white w-full mt-3" onclick="nextPracticeQ();render()">Next Question →</button>`:''}
+    <button class="btn card w-full mt-2" onclick="nav('dashboard')">End Session</button>
+  </div>`;
+}
+function answerPractice(i){ const p=state.practice; p.answered=i; p.seen++; if(i===p.q.correctAnswer) p.correct++; else p.wrong++; render(); }
+
+function viewExtra(){
+  return `${Header('Extra Questions & Study Material','goBack()')}
+  <p class="mb-4" style="color:var(--muted)">Additional practice material — separate from graded syllabus tests.</p>
+  <div class="grid grid-cols-2 gap-3 mb-4">
+    <button class="btn grad text-white" onclick="nav('notes')">📝 Short Notes (topic-wise)</button>
+    <button class="btn grad text-white" onclick="nav('formulas')">📐 Formula Sheet (topic-wise)</button>
+  </div>
+  <div class="grid sm:grid-cols-2 gap-3 fade">
+    ${PDFS.map(p=>`<div class="card p-4 border-l-4" style="border-left-color:var(--p1)">
+      <div class="flex justify-between"><div class="text-2xl">📄</div><button onclick="toggleBmM('${p.id}')">${state.bmM.includes(p.id)?'🔖':'📑'}</button></div>
+      <div class="font-semibold mt-1">${p.t}</div><div class="text-xs" style="color:var(--muted)">${p.s} · ${p.c}</div>
+      <div class="text-sm mt-2">${p.d}</div>
+      <button class="btn grad text-white mt-3" onclick="${p.t==='Formula Sheet'?"nav('formulas',{subject:'"+p.s+"'})":p.t==='Revision Notes'?"nav('notes',{subject:'"+p.s+"'})":"openPdf('"+p.id+"')"}">${p.t==='Formula Sheet'||p.t==='Revision Notes'?'Open':'Open PDF'}</button>
+    </div>`).join('')}
+  </div>`;
+}
+function openPdf(id){ const p=PDFS.find(x=>x.id===id); showInfo(p.t,p.content+'\n\n(Demo preview — production opens the real PDF from Supabase Storage.)'); }
+
+function topicTabPage(title,data,itemsKey,back){
+  const sub=state.params.subject || data[0].subject;
+  const subs=[...new Set(data.map(d=>d.subject))];
+  const chaptersForSub=data.filter(d=>d.subject===sub);
+  const chapter=state.params.chapter || (chaptersForSub[0]&&chaptersForSub[0].chapter);
+  const entry=data.find(d=>d.subject===sub && d.chapter===chapter);
+  return `${Header(title,back)}
+  <div class="mb-3">
+    <div class="text-xs font-semibold mb-1" style="color:var(--muted)">Subject</div>
+    <div class="flex gap-2 flex-wrap">${subs.map(s=>`<span class="chip ${s===sub?'active':''}" onclick="nav('${state.route}',{subject:'${s}'})">${s}</span>`).join('')}</div>
+  </div>
+  <div class="mb-4">
+    <div class="text-xs font-semibold mb-1" style="color:var(--muted)">Topic / Chapter</div>
+    <div class="flex gap-2 flex-wrap">${chaptersForSub.map(c=>`<span class="chip ${c.chapter===chapter?'active':''}" onclick="nav('${state.route}',{subject:'${sub}',chapter:'${c.chapter}'})">${c.chapter}</span>`).join('')}</div>
+  </div>
+  <div class="card p-4 fade">
+    ${entry?`<div class="font-semibold mb-2">${sub} — ${chapter}</div>
+      <ul class="text-sm list-disc pl-5" style="color:var(--muted)">${entry[itemsKey].map(pt=>`<li class="mb-1">${pt}</li>`).join('')}</ul>
+      ${entry.derivation?`<div class="mt-4 pt-3" style="border-top:1px solid var(--border)">
+        <div class="font-semibold text-sm mb-2">📐 Step-by-Step Derivation</div>
+        <ol class="text-sm list-decimal pl-5" style="color:var(--muted)">${entry.derivation.map(st=>`<li class="mb-1">${st}</li>`).join('')}</ol>
+      </div>`:''}`
+      :`<div class="text-center" style="color:var(--muted)">More ${title.toLowerCase()} for ${sub} are being prepared.</div>`}
+  </div>
+  <div class="text-xs mt-4" style="color:var(--muted)">More subjects and chapters are added over time.</div>`;
+}
+function viewNotes(){ return topicTabPage('Short Notes',NOTES,'points','goBack()'); }
+function viewFormulas(){ return topicTabPage('Formula Sheet',FORMULAS,'items','goBack()'); }
+
+function viewBookmarks(){
+  const qs=QBANK.filter(q=>state.bmQ.includes(q.id));
+  const ms=PDFS.filter(p=>state.bmM.includes(p.id));
+  return `${Header('My Bookmarks','goBack()')}
+  <h3 class="font-head font-bold mb-2">Questions</h3>
+  <div class="grid gap-2 mb-6">${qs.length?qs.map(q=>`<div class="card p-3">${q.question}</div>`).join(''):`<div class="card p-4 text-center" style="color:var(--muted)">No bookmarked questions yet.</div>`}</div>
+  <h3 class="font-head font-bold mb-2">Study Material</h3>
+  <div class="grid gap-2">${ms.length?ms.map(p=>`<div class="card p-3 flex justify-between"><span>${p.t}</span><button class="btn card" onclick="openPdf('${p.id}')">Open</button></div>`).join(''):`<div class="card p-4 text-center" style="color:var(--muted)">No bookmarked PDFs yet.</div>`}</div>`;
+}
+
+function viewDashboard(){
+  const res=state.results;
+  const attempted=res.length, solved=res.reduce((a,r)=>a+r.total,0);
+  const avg=attempted?Math.round(res.reduce((a,r)=>a+r.pct,0)/attempted):0;
+  const daily=JSON.parse(localStorage.getItem('rbse_daily')||'{"last":0,"streak":0}');
+  return `${Header('My Dashboard','goBack()')}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 fade mb-3">
+    ${[['Tests Attempted',attempted],['Questions Solved',solved],['Avg Score',avg+'%'],['Streak','🔥 '+daily.streak+'d']].map(([l,v])=>`
+      <div class="card p-4 text-center"><div class="font-head text-xl font-bold">${v}</div><div class="text-xs" style="color:var(--muted)">${l}</div></div>`).join('')}
+  </div>
+  <div class="flex gap-2 mb-5 flex-wrap">
+    <button class="btn card" onclick="nav('bookmarks')">🔖 My Bookmarks</button>
+    <button class="btn card" onclick="shareProgress()">📤 Share Progress</button>
+  </div>
+  <h3 class="font-head font-bold mb-2">Recent Tests</h3>
+  <div class="grid gap-2">
+  ${res.length?res.slice(0,5).map(r=>`<div class="card p-3 flex justify-between"><div>${r.subject==='All'?'All Subjects':r.subject} · ${r.chapter}</div><b style="color:${r.pct>=50?'var(--green)':'var(--red)'}">${r.pct}%</b></div>`).join('')
+    :`<div class="card p-6 text-center" style="color:var(--muted)">No tests yet — take one from Subjects!</div>`}
+  </div>`;
+}
+
+let dailySubject='All';
+function viewDaily(){
+  const daily=JSON.parse(localStorage.getItem('rbse_daily')||'{"last":0,"streak":0}');
+  const diffH=(Date.now()-daily.last)/3600000;
+  const canPlay=diffH>=24;
+  const remain=canPlay?null:fmtTime(Math.round((24-diffH)*3600));
+  const allSubs=['All',...new Set(QBANK.map(q=>q.subject))];
+  return `${Header('Daily Test','goBack()')}
+  <div class="card p-6 text-center fade">
+    <div class="text-3xl">📅</div>
+    <div class="font-head text-xl font-bold mt-2">Today's Test</div>
+    <div class="mt-1" style="color:var(--muted)">20 Questions · Mixed Difficulty</div>
+    <div class="mt-2 text-sm">🔥 Current streak: <b>${daily.streak} day${daily.streak===1?'':'s'}</b> · resets every 24 hours</div>
+    <div class="text-left mt-4">
+      <label class="text-sm font-semibold">Choose subject</label>
+      <div class="flex gap-2 my-2 flex-wrap justify-center" id="dailySubChips">
+        ${allSubs.map((s,i)=>`<button class="chip ${dailySubject===s?'active':''}" onclick="pickDailySub('${s}',this)">${s==='All'?'All Subjects':s}</button>`).join('')}
+      </div>
+    </div>
+    ${canPlay
+      ?`<button class="btn grad text-white mt-4" onclick="setupSel={count:20,difficulty:'Mixed',type:'Mixed'};startTest(dailySubject,'All',true)">Start Today's Test</button>`
+      :`<button class="btn card mt-4" disabled>Come back in ${remain}</button>`}
+  </div>`;
+}
+function pickDailySub(s,el){ dailySubject=s; document.querySelectorAll('#dailySubChips .chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); }
+
+/* ============ ROUTER / RENDER ============ */
+function render(){
+  document.documentElement.setAttribute('data-theme',state.dark?'dark':'light');
+  const views={home:viewHome,subjects:viewSubjects,stream:viewStream,subject:viewSubject,setup:viewSetup,test:viewTest,
+    result:viewResult,review:viewReview,extra:viewExtra,notes:viewNotes,formulas:viewFormulas,bookmarks:viewBookmarks,profile:viewProfile,
+    dashboard:viewDashboard,daily:viewDaily,practice:viewPractice,practiceSession:viewPracticeSession};
+  document.getElementById('app').innerHTML=(views[state.route]||viewHome)();
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active',b.dataset.r===state.route));
+}
+document.documentElement.setAttribute('data-theme',state.dark?'dark':'light');
+render();
+</script>
+</body>
+</html>
